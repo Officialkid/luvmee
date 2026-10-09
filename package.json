@@ -1,0 +1,19 @@
+{
+  "name": "project-alikah",
+  "version": "1.0.0",
+  "description": "Project ALIKAH — A mobile-first romantic surprise interactive web experience",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo Static build ready"
+  },
+  "keywords": [
+    "romantic",
+    "interactive",
+    "alikah",
+    "experience"
+  ],
+  "author": "",
+  "license": "MIT"
+}

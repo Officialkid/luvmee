@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FCE7ED">
+  <meta name="description" content="Project ALIKAH — An interactive, romantic surprise digital experience built with love.">
+  <title>Project ALIKAH ❤️ | A Special Surprise</title>
+
+  <!-- Google Fonts for Editorial Romantic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Background Floating Ambient Particles Canvas -->
+  <canvas id="ambient-canvas" aria-hidden="true"></canvas>
+
+  <!-- Celebration Confetti Canvas Layer -->
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- Subtle Top Navigation / Floating Audio & Quick Controls -->
+  <header class="app-header" role="banner">
+    <div class="header-brand">
+      <span class="heart-icon-pulse" aria-hidden="true">💖</span>
+      <span class="brand-text">For Alikah</span>
+    </div>
+    
+    <div class="header-controls">
+      <!-- Music Toggle Button -->
+      <button id="music-toggle-btn" class="icon-pill-btn" aria-label="Toggle romantic background music" title="Toggle background music">
+        <span class="music-icon" id="music-icon">🎵</span>
+        <span class="music-label">Music</span>
+        <span class="sound-wave" id="sound-wave" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+      </button>
+
+      <!-- Quick Compliments Shortcut -->
+      <button id="nav-compliment-btn" class="icon-pill-btn secondary" aria-label="Open Compliments generator" title="A sweet reminder">
+        <span>💗</span>
+        <span class="hide-mobile">Sweet Note</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Experience Wrapper -->
+  <main class="experience-stage" id="experience-stage" role="main">
+
+    <!-- ==================== SCENE A: CREATIVE GREETING ==================== -->
+    <section id="scene-a" class="scene active" aria-labelledby="scene-a-title">
+      <div class="card glass-card hero-card">
+        <!-- Radiant Sun & Sparkles Illustration -->
+        <div class="illustration-wrapper sunrise-anim" aria-hidden="true">
+          <svg class="sunrise-svg" viewBox="0 0 220 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sunGrad" x1="110" y1="25" x2="110" y2="115" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FFE082"/>
+                <stop offset="50%" stop-color="#FFB300"/>
+                <stop offset="100%" stop-color="#E85D75"/>
+              </linearGradient>
+              <radialGradient id="sunGlow" cx="110" cy="85" r="75" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FFF0F5" stop-opacity="0.9"/>
+                <stop offset="60%" stop-color="#FCE7ED" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#FCE7ED" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="sparkleGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#FFE082"/>
+                <stop offset="100%" stop-color="#E85D75"/>
+              </linearGradient>
+            </defs>
+            <!-- Ambient Glow -->
+            <circle cx="110" cy="85" r="72" fill="url(#sunGlow)"/>
+            
+            <!-- Radiating Day Rays -->
+            <g stroke="#E85D75" stroke-width="2.5" stroke-linecap="round" opacity="0.65">
+              <path d="M110 22 V8"/>
+              <path d="M60 42 L48 30"/>
+              <path d="M160 42 L172 30"/>
+              <path d="M30 85 H16"/>
+              <path d="M190 85 H204"/>
+              <path d="M52 120 L40 132"/>
+              <path d="M168 120 L180 132"/>
+            </g>
+            
+            <!-- Sparkles -->
+            <path d="M72 26 Q75 35 84 38 Q75 41 72 50 Q69 41 60 38 Q69 35 72 26 Z" fill="url(#sparkleGrad)"/>
+            <path d="M155 22 Q157 28 163 30 Q157 32 155 38 Q153 32 147 30 Q153 28 155 22 Z" fill="url(#sparkleGrad)"/>
+            <path d="M185 65 Q186 69 190 70 Q186 71 185 75 Q184 71 180 70 Q184 69 185 65 Z" fill="#FFB300"/>
+            <path d="M36 62 Q37 66 41 67 Q37 68 36 72 Q35 68 31 67 Q35 66 36 62 Z" fill="#E85D75"/>
+            
+            <!-- Main Radiant Sun -->
+            <circle cx="110" cy="85" r="42" fill="url(#sunGrad)"/>
+            
+            <!-- Orbit Ring -->
+            <ellipse cx="110" cy="85" rx="58" ry="16" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-dasharray="4 3" transform="rotate(-15 110 85)"/>
+            
+            <!-- Center Rising Heart -->
+            <path d="M110 75 C106 68, 97 69, 97 78 C97 88, 110 97, 110 97 C110 97, 123 88, 123 78 C123 69, 114 68, 110 75 Z" fill="#FFFFFF"/>
+            
+            <!-- Horizon Base Curve -->
+            <path d="M15 115 Q 110 98 205 115" stroke="#542638" stroke-width="4" stroke-linecap="round"/>
+            <path d="M35 125 Q 110 114 185 125" stroke="#E85D75" stroke-width="2.5" stroke-linecap="round" opacity="0.35"/>
+          </svg>
+        </div>
+
+        <span class="badge-pill">A special check-in ✨</span>
+        <h1 id="scene-a-title" class="title-serif">Hii Alikah, how is your day going? ✨</h1>
+        <p class="body-text">
+          Because it's well past morning... and we definitely need to be more creative than that 😉<br>
+          I hope you've smiled today. But just in case you haven't, I crafted a little something for you.
+        </p>
+
+        <div class="action-row">
+          <button id="btn-scene-a" class="btn btn-primary pulse-hover" type="button">
+            <span>Show me! 👀</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCENE B: BUILD SUSPENSE ==================== -->
+    <section id="scene-b" class="scene" aria-labelledby="scene-b-title" aria-live="polite">
+      <div class="card glass-card suspense-card">
+        <div class="card-icon-floating" aria-hidden="true">💭</div>
+        <span class="badge-pill">Hold on a second...</span>
+
+        <h2 id="scene-b-title" class="sr-only">A quick question</h2>
+
+        <div class="typewriter-container" aria-live="polite">
+          <p id="typewriter-line-1" class="suspense-text main-typewriter"></p>
+          <p id="typewriter-line-2" class="suspense-text secondary-typewriter hidden"></p>
+        </div>
+
+        <div class="action-row mt-6">
+          <button id="btn-scene-b" class="btn btn-primary hidden fade-in-btn" type="button">
+            <span>Okay, ask me! 💌</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCENE C & D: THE MAIN QUESTION & ESCAPING NO BUTTON ==================== -->
+    <section id="scene-c" class="scene" aria-labelledby="scene-c-title">
+      <div class="card glass-card question-card" id="question-card">
+        <div class="card-icon-floating" aria-hidden="true">🥹</div>
+        
+        <h2 id="scene-c-title" class="title-serif big-question">Alikah, do you love me? 🥹❤️</h2>
+        
+        <p class="body-text sub-instruction">
+          Choose wisely. This answer may or may not affect my entire existence.
+        </p>
+
+        <!-- Dynamic reaction bubble for the NO attempts -->
+        <div id="no-reaction-bubble" class="no-reaction-badge hidden" aria-live="polite" role="status">
+          <span id="no-reaction-text">Are you sure, Alikah? 🤨</span>
+        </div>
+
+        <!-- Interactive Playground for YES and NO buttons -->
+        <div class="button-arena" id="button-arena">
+          <div class="button-pair">
+            <button id="btn-yes" class="btn btn-primary btn-large btn-yes" type="button">
+              <span>YES, OF COURSE! ❤️</span>
+            </button>
+
+            <button id="btn-no" class="btn btn-outline btn-no" type="button" aria-label="NO button">
+              <span>NO 🙄</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="disclaimer-text">
+          <small>Hint: One of these buttons has a mind of its own 😉</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCENE E: THE YES CELEBRATION ==================== -->
+    <section id="scene-e" class="scene" aria-labelledby="scene-e-title" aria-live="polite">
+      <div class="card glass-card celebration-card">
+        <div class="celebration-badge-row">
+          <span class="celebration-emoji anim-bounce">🎉</span>
+          <span class="celebration-emoji anim-pop">💖</span>
+          <span class="celebration-emoji anim-bounce-delay">🥳</span>
+        </div>
+
+        <div class="celebration-messages">
+          <h2 id="scene-e-title" class="title-serif celebration-heading reveal-item" style="--stagger: 1">
+            HAHA! I KNEW IT! 😭❤️
+          </h2>
+          <p class="celebration-sub reveal-item" style="--stagger: 2">
+            You see? My heart has excellent taste.
+          </p>
+          <div class="highlight-quote-box reveal-item" style="--stagger: 3">
+            <p class="love-declaration">
+              “I love you too, Alikah. More than this little website can explain.”
+            </p>
+          </div>
+        </div>
+
+        <div class="action-row mt-6 reveal-item" style="--stagger: 4">
+          <button id="btn-to-note" class="btn btn-primary" type="button">
+            <span>Read my letter 💌</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCENE F: THE PERSONAL NOTE ==================== -->
+    <section id="scene-f" class="scene" aria-labelledby="scene-f-title">
+      <div class="card letter-card">
+        <div class="letter-stamp" aria-hidden="true">
+          <span>ALIKAH</span>
+          <small>SPECIAL</small>
+        </div>
+
+        <div class="letter-header">
+          <span class="letter-date" id="letter-current-date">Today</span>
+          <span class="letter-tag">A Note For You</span>
+        </div>
+
+        <h2 id="scene-f-title" class="title-serif letter-title">But seriously, Alikah...</h2>
+
+        <div class="letter-body">
+          <p>I made this little thing just to give you a reason to smile today.</p>
+          <p>Sometimes the smallest gestures can make an ordinary day feel a little more special.</p>
+          <p class="letter-closing">I hope this brought a smile to your face. ❤️</p>
+        </div>
+
+        <div class="letter-footer">
+          <button id="btn-to-gift" class="btn btn-primary pulse-hover" type="button">
+            <span>One last surprise ✨</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCENE G: THE FINAL SURPRISE ==================== -->
+    <section id="scene-g" class="scene" aria-labelledby="scene-g-title">
+      <div class="card glass-card gift-stage-card">
+        <span class="badge-pill">The Grand Finale</span>
+        <h2 id="scene-g-title" class="title-serif mb-2">A gift just for you</h2>
+        <p class="body-text mb-4" id="gift-instruction-text">Tap the gift box below to unwrap it 🎁</p>
+
+        <!-- Interactive 3D Gift Box -->
+        <div class="gift-box-container" id="gift-box-container" role="button" tabindex="0" aria-label="Interactive gift box. Press Enter or click to open.">
+          <div class="gift-box" id="gift-box">
+            <div class="gift-lid" id="gift-lid">
+              <div class="ribbon-bow">
+                <div class="bow-left"></div>
+                <div class="bow-right"></div>
+                <div class="bow-center"></div>
+              </div>
+              <div class="lid-stripe"></div>
+            </div>
+            <div class="gift-body">
+              <div class="body-stripe"></div>
+              <div class="sparkle-spark s1">✨</div>
+              <div class="sparkle-spark s2">💖</div>
+              <div class="sparkle-spark s3">✨</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revealed Content (Appears smoothly once opened) -->
+        <div id="gift-revealed-content" class="gift-revealed hidden" aria-live="polite">
+          <div class="reveal-message-card">
+            <div class="party-popper-badge" aria-hidden="true">🎊</div>
+            <p class="surprise-line-1">
+              Surprise! You made it to the end. And yes, I spent my time writing code just to make you smile. 😂❤️
+            </p>
+            <div class="divider-hearts"><span>♡</span> <span>♥</span> <span>♡</span></div>
+            <p class="surprise-line-2">
+              Have a beautiful day, Alikah. You deserve it.
+            </p>
+          </div>
+
+          <!-- Bottom Action Suite -->
+          <div class="final-actions-grid">
+            <button id="btn-replay" class="btn btn-outline" type="button">
+              <span>Experience Again ↺</span>
+            </button>
+            <button id="btn-open-compliments" class="btn btn-primary" type="button">
+              <span>Tell me something nice 💗</span>
+            </button>
+          </div>
+
+          <!-- Developer Easter Egg Trigger -->
+          <div class="easter-egg-container mt-6">
+            <button id="btn-open-terminal" class="terminal-trigger-btn" type="button" aria-label="Open Developer Mode easter egg">
+              <span class="terminal-dot"></span>
+              <span>Developer Mode</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: COMPLIMENT GENERATOR ==================== -->
+  <div id="modal-compliments" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="compliments-modal-title">
+    <div class="modal-card compliment-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon" aria-hidden="true">💌</span>
+          <h3 id="compliments-modal-title" class="modal-title">Sweet Reminders</h3>
+        </div>
+        <button id="btn-close-compliments" class="modal-close-btn" type="button" aria-label="Close compliments modal">✕</button>
+      </div>
+
+      <div class="compliment-display-area">
+        <div class="compliment-quote-mark" aria-hidden="true">“</div>
+        <p id="compliment-quote-text" class="compliment-text">
+          You make ordinary days feel a little more special.
+        </p>
+        <span id="compliment-counter" class="compliment-counter-badge">Note 1 of 10</span>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-next-compliment" class="btn btn-primary w-full" type="button">
+          <span>Tell me something nice 💗</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: LOVE TERMINAL (EASTER EGG) ==================== -->
+  <div id="modal-terminal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="terminal-modal-title">
+    <div class="terminal-window" id="terminal-window">
+      <!-- Terminal Title Bar -->
+      <div class="terminal-titlebar">
+        <div class="terminal-window-buttons" aria-hidden="true">
+          <span class="dot dot-close" id="btn-terminal-dot-close" title="Close"></span>
+          <span class="dot dot-min"></span>
+          <span class="dot dot-max"></span>
+        </div>
+        <span id="terminal-modal-title" class="terminal-title">love.exe — bash [Session: ALIKAH]</span>
+        <button id="btn-close-terminal" class="terminal-exit-btn" type="button" aria-label="Close terminal">✕</button>
+      </div>
+
+      <!-- Terminal Output Screen -->
+      <div class="terminal-body" id="terminal-screen" tabindex="0" role="region" aria-label="Terminal output stream">
+        <div id="terminal-lines" class="terminal-lines-content"></div>
+        <div class="terminal-input-row" id="terminal-input-container">
+          <span class="terminal-prompt" aria-hidden="true">alikah@heart:~$</span>
+          <input type="text" id="terminal-command-input" class="terminal-cmd-input" autocomplete="off" spellcheck="false" aria-label="Enter terminal command (type help for list of commands)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Element for optional background instrumental track -->
+  <audio id="bg-audio" preload="none" loop>
+    <source src="assets/music.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- Core JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
