@@ -25,9 +25,8 @@ Project ALIKAH is an interactive digital love letter designed to make Alikah smi
 4. **Scene E — The YES Celebration**: Confetti explosion (local 60FPS canvas engine), floating hearts, and romantic declaration sequence.
 5. **Scene F — The Personal Note**: Warm stationery letter card with a heartfelt message and live date stamp.
 6. **Scene G — The Final Surprise**: Interactive 3D gift box with ribbon unwrapping animation, warm closing line, and replay button.
-7. **Developer Mode (Easter Egg)**: Dark retro hacker/terminal modal with CRT scanlines, character typewriter output of `love.exe`, and interactive bash commands (`help`, `about`, `secret`, `compliment`, `status`, `clear`, `exit`).
-8. **Compliment Generator**: Shuffle modal loaded with 10 sweet reminders, accessible at any time from the navigation bar.
-9. **Resilient Music Player**: Tap to toggle background music. Automatically plays `assets/music.mp3` or seamlessly falls back to a built-in Web Audio API romantic lofi chime progression!
+7. **Compliment Generator**: Shuffle modal loaded with 10 sweet reminders, accessible at any time from the navigation bar.
+8. **Resilient Music Player**: Tap to toggle background music. Automatically plays `assets/music.mp3` or seamlessly falls back to a built-in Web Audio API romantic lofi chime progression!
 
 ---
 

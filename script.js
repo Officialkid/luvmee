@@ -20,8 +20,6 @@
     usingSynthAudio: false,
     currentComplimentIndex: 0,
     complimentsShuffled: [],
-    terminalInitialized: false,
-    terminalIsTyping: false
   };
 
   // Escaping NO button funny messages
@@ -51,17 +49,6 @@
     "You are doing so much better than you give yourself credit for."
   ];
 
-  // Terminal simulated script lines
-  const terminalLogLines = [
-    "> initializing love.exe...",
-    "> scanning heart...",
-    "> target identified: ALIKAH",
-    "> affection level: OVERFLOW",
-    "> bug detected: can't stop thinking about you",
-    "> attempting to fix...",
-    "> ERROR: feelings are permanent.",
-    "> status: happily compromised ❤️"
-  ];
 
   /* ==========================================================================
      DOM ELEMENTS CACHE
@@ -100,7 +87,6 @@
     giftInstruction: document.getElementById('gift-instruction-text'),
     btnReplay: document.getElementById('btn-replay'),
     btnOpenCompliments: document.getElementById('btn-open-compliments'),
-    btnOpenTerminal: document.getElementById('btn-open-terminal'),
     
     // Header controls
     musicToggleBtn: document.getElementById('music-toggle-btn'),
@@ -115,13 +101,6 @@
     btnNextCompliment: document.getElementById('btn-next-compliment'),
     btnCloseCompliments: document.getElementById('btn-close-compliments'),
     
-    // Terminal Easter Egg Modal
-    modalTerminal: document.getElementById('modal-terminal'),
-    terminalLines: document.getElementById('terminal-lines'),
-    terminalInput: document.getElementById('terminal-command-input'),
-    terminalScreen: document.getElementById('terminal-screen'),
-    btnCloseTerminal: document.getElementById('btn-close-terminal'),
-    btnTerminalDotClose: document.getElementById('btn-terminal-dot-close'),
     
     // Canvases
     ambientCanvas: document.getElementById('ambient-canvas'),
@@ -541,108 +520,6 @@
   }
 
   /* ==========================================================================
-     DEVELOPER LOVE TERMINAL (EASTER EGG)
-     ========================================================================== */
-  function openTerminalModal() {
-    dom.modalTerminal.classList.remove('hidden');
-    dom.terminalInput.focus();
-
-    if (!state.terminalInitialized) {
-      state.terminalInitialized = true;
-      runTerminalSequence();
-    }
-  }
-
-  function closeTerminalModal() {
-    dom.modalTerminal.classList.add('hidden');
-  }
-
-  function printTerminalLine(text, className = '') {
-    const lineEl = document.createElement('div');
-    lineEl.className = `terminal-line ${className}`;
-    lineEl.textContent = text;
-    dom.terminalLines.appendChild(lineEl);
-    dom.terminalScreen.scrollTop = dom.terminalScreen.scrollHeight;
-  }
-
-  async function runTerminalSequence() {
-    if (state.terminalIsTyping) return;
-    state.terminalIsTyping = true;
-    dom.terminalLines.innerHTML = '';
-
-    for (let line of terminalLogLines) {
-      let isError = line.includes('ERROR:');
-      let isSuccess = line.includes('status:');
-      printTerminalLine(line, isError ? 'error' : (isSuccess ? 'success' : ''));
-      await sleep(prefersReducedMotion() ? 50 : 380);
-    }
-
-    printTerminalLine("--------------------------------------------------", "system");
-    printTerminalLine("Type 'help' for available commands.", "system");
-    state.terminalIsTyping = false;
-  }
-
-  function handleTerminalCommand(cmdRaw) {
-    const cmd = cmdRaw.trim().toLowerCase();
-    printTerminalLine(`alikah@heart:~$ ${cmdRaw}`, "system");
-
-    switch (cmd) {
-      case 'help':
-        printTerminalLine("Available commands:", "system");
-        printTerminalLine("  help        - Show this list");
-        printTerminalLine("  about       - Details on Project ALIKAH");
-        printTerminalLine("  secret      - Reveal a hidden developer message");
-        printTerminalLine("  compliment  - Generate an instant sweet note");
-        printTerminalLine("  status      - Display current love metrics");
-        printTerminalLine("  clear       - Clear the terminal console");
-        printTerminalLine("  exit        - Close terminal modal");
-        break;
-
-      case 'about':
-        printTerminalLine("Project ALIKAH v1.0.0");
-        printTerminalLine("Architected with semantic HTML5, modern CSS3 & vanilla JavaScript.");
-        printTerminalLine("Dedicated exclusively to Alikah. Crafted with 100% love.");
-        break;
-
-      case 'secret':
-        printTerminalLine("✨ SECRET DECRYPTED:", "success");
-        printTerminalLine("Every single line of this code was written with a genuine smile.");
-        printTerminalLine("You are deeply appreciated, Alikah.");
-        break;
-
-      case 'compliment':
-        const randomComp = complimentsList[Math.floor(Math.random() * complimentsList.length)];
-        printTerminalLine(`💌 NOTE: "${randomComp}"`, "success");
-        break;
-
-      case 'status':
-        printTerminalLine("System Status: HEARTS_RUNNING", "success");
-        printTerminalLine("Affection Level: [████████████████] 100% (OVERFLOW)");
-        printTerminalLine("Firewall: BYPASSED_BY_ALIKAH");
-        break;
-
-      case 'clear':
-        dom.terminalLines.innerHTML = '';
-        break;
-
-      case 'exit':
-      case 'quit':
-        closeTerminalModal();
-        break;
-
-      case '':
-        break;
-
-      default:
-        printTerminalLine(`command not found: ${cmdRaw}. Type 'help' for guidance.`, "error");
-        break;
-    }
-
-    dom.terminalInput.value = '';
-    dom.terminalScreen.scrollTop = dom.terminalScreen.scrollHeight;
-  }
-
-  /* ==========================================================================
      AUDIO ENGINE (HTML5 AUDIO + RESILIENT SYNTHESIZER FALLBACK)
      ========================================================================== */
   let audioContext = null;
@@ -891,7 +768,6 @@
     // Scene G Actions
     dom.btnReplay.addEventListener('click', resetExperience);
     dom.btnOpenCompliments.addEventListener('click', openComplimentModal);
-    dom.btnOpenTerminal.addEventListener('click', openTerminalModal);
 
     // Header Actions
     dom.musicToggleBtn.addEventListener('click', toggleMusic);
@@ -904,27 +780,12 @@
       if (e.target === dom.modalCompliments) closeComplimentModal();
     });
 
-    // Terminal Modal Actions
-    dom.btnCloseTerminal.addEventListener('click', closeTerminalModal);
-    dom.btnTerminalDotClose.addEventListener('click', closeTerminalModal);
-    dom.modalTerminal.addEventListener('click', (e) => {
-      if (e.target === dom.modalTerminal) closeTerminalModal();
-    });
-
-    dom.terminalInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        handleTerminalCommand(dom.terminalInput.value);
-      }
-    });
 
     // Global Keyboard Accessibility (Esc to close modals)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (!dom.modalCompliments.classList.contains('hidden')) {
           closeComplimentModal();
-        }
-        if (!dom.modalTerminal.classList.contains('hidden')) {
-          closeTerminalModal();
         }
       }
     });

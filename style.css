@@ -23,11 +23,6 @@
   --color-border: rgba(232, 93, 117, 0.2);
   --color-white: #FFFFFF;
   
-  /* Terminal Palette */
-  --terminal-bg: #0D1117;
-  --terminal-green: #39FF14;
-  --terminal-green-dim: #27C93F;
-  --terminal-border: #30363D;
   
   /* Typography */
   --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -958,43 +953,6 @@ input:focus-visible {
   flex-wrap: wrap;
 }
 
-/* Easter Egg trigger */
-.easter-egg-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-.terminal-trigger-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(84, 38, 56, 0.06);
-  border: 1px solid rgba(84, 38, 56, 0.12);
-  color: var(--color-burgundy-soft);
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.terminal-trigger-btn:hover {
-  background: var(--color-burgundy);
-  color: var(--color-blush);
-  border-color: var(--color-burgundy);
-}
-
-.terminal-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #27C93F;
-  box-shadow: 0 0 6px #27C93F;
-}
-
 /* ==========================================================================
    MODAL DIALOGS
    ========================================================================= */
@@ -1125,153 +1083,6 @@ input:focus-visible {
 }
 
 /* ==========================================================================
-   DEVELOPER LOVE TERMINAL (EASTER EGG)
-   ========================================================================== */
-.terminal-window {
-  width: 100%;
-  max-width: 600px;
-  background: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
-  border-radius: 14px;
-  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.5), 0 0 35px rgba(57, 255, 20, 0.08);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  font-family: var(--font-mono);
-  animation: modalEnter 0.4s var(--ease-spring) forwards;
-  position: relative;
-}
-
-/* Subtle retro CRT scanline overlay */
-.terminal-window::after {
-  content: " ";
-  position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-  background-size: 100% 4px;
-  pointer-events: none;
-  opacity: 0.5;
-  z-index: 20;
-}
-
-.terminal-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #161B22;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--terminal-border);
-  user-select: none;
-  position: relative;
-  z-index: 22;
-}
-
-.terminal-window-buttons {
-  display: flex;
-  gap: 7px;
-}
-
-.terminal-window-buttons .dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot-close { background: #FF5F56; cursor: pointer; }
-.dot-min { background: #FFBD2E; }
-.dot-max { background: #27C93F; }
-
-.terminal-title {
-  color: #8B949E;
-  font-size: 0.78rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 320px;
-}
-
-.terminal-exit-btn {
-  background: transparent;
-  border: none;
-  color: #8B949E;
-  font-size: 0.85rem;
-  cursor: pointer;
-  padding: 2px 6px;
-}
-
-.terminal-exit-btn:hover {
-  color: #FFF;
-}
-
-.terminal-body {
-  padding: 16px 18px;
-  height: 340px;
-  max-height: 55vh;
-  overflow-y: auto;
-  color: var(--terminal-green);
-  font-size: 0.86rem;
-  line-height: 1.6;
-  text-shadow: 0 0 5px rgba(57, 255, 20, 0.4);
-  scrollbar-width: thin;
-  scrollbar-color: #30363D #0D1117;
-  position: relative;
-  z-index: 21;
-}
-
-.terminal-body::-webkit-scrollbar {
-  width: 6px;
-}
-.terminal-body::-webkit-scrollbar-thumb {
-  background: #30363D;
-  border-radius: 3px;
-}
-
-.terminal-line {
-  margin-bottom: 6px;
-  word-break: break-word;
-}
-
-.terminal-line.error {
-  color: #FF7B72;
-  text-shadow: 0 0 4px rgba(255, 123, 114, 0.4);
-}
-
-.terminal-line.success {
-  color: #7EE787;
-  font-weight: 600;
-}
-
-.terminal-line.system {
-  color: #58A6FF;
-}
-
-.terminal-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.terminal-prompt {
-  color: #58A6FF;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.terminal-cmd-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--terminal-green);
-  font-family: var(--font-mono);
-  font-size: 0.86rem;
-  outline: none;
-  caret-color: var(--terminal-green);
-}
-
-/* ==========================================================================
    ANIMATIONS & KEYFRAMES
    ========================================================================== */
 @keyframes heartPulse {
@@ -1333,12 +1144,6 @@ input:focus-visible {
   
   .button-pair {
     gap: 12px;
-  }
-  
-  .terminal-body {
-    height: 280px;
-    font-size: 0.8rem;
-    padding: 12px 14px;
   }
 }
 
