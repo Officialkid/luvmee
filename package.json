@@ -1,18 +1,27 @@
 {
-  "name": "project-alikah",
+  "name": "luvmee-monorepo",
   "version": "1.0.0",
-  "description": "Project ALIKAH — A mobile-first romantic surprise interactive web experience",
-  "main": "server.js",
+  "private": true,
+  "description": "LUVMEE (Love Me) — Mobile-first personalized romantic experience platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "build:shared": "npm --workspace=@luvmee/shared run build",
+    "test:shared": "npm --workspace=@luvmee/shared test",
+    "dev:alika": "node server.js",
+    "dev:web": "npm --workspace=recipient-web run dev",
+    "dev:mobile": "npm --workspace=luvmee-mobile start",
+    "build:web": "npm --workspace=recipient-web run build"
   },
   "keywords": [
+    "luvmee",
     "romantic",
-    "interactive",
-    "alikah",
-    "experience"
+    "experience",
+    "react-native",
+    "nextjs",
+    "supabase"
   ],
-  "author": "",
   "license": "MIT"
 }

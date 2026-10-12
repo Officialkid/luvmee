@@ -1,0 +1,19 @@
+{
+  "name": "@luvmee/shared",
+  "version": "1.0.0",
+  "description": "Shared schemas, types, templates, and utilities for LUVMEE",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --outDir dist",
+    "test": "node test/shared.test.mjs",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
