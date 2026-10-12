@@ -8,6 +8,8 @@
     "apps/*"
   ],
   "scripts": {
+    "build": "npm run build:shared && npm run build:web",
+    "test": "npm run test:shared",
     "build:shared": "npm --workspace=@luvmee/shared run build",
     "test:shared": "npm --workspace=@luvmee/shared test",
     "dev:alika": "node server.js",
