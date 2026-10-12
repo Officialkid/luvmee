@@ -15,6 +15,7 @@ import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { supabase } from '../../services/supabase';
 
 export default function SignInScreen() {
@@ -56,9 +57,7 @@ export default function SignInScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.brandContainer}>
-          <View style={styles.heartCircle}>
-            <Heart size={32} color={THEME.colors.rose} fill={THEME.colors.rose} />
-          </View>
+          <Logo variant="stacked" width={160} height={125} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>Welcome back to LUVMEE</Text>
           <Text style={styles.subtitle}>
             Sign in to access and manage your romantic surprises across devices.

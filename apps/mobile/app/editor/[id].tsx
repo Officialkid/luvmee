@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Sparkles, Eye, Send, Check } from 'lucide-react-native';
+import { Sparkles, Eye, Send, Check, BookmarkCheck, ArrowLeft } from 'lucide-react-native';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -23,17 +24,25 @@ import {
   Experience
 } from '@luvmee/shared';
 import { experienceService } from '../../services/experienceService';
+import { partnerService } from '../../services/partnerService';
+import { supabase } from '../../services/supabase';
 
 const THEMES = [DEFAULT_ROMANTIC_THEME, GOLDEN_SUNSET_THEME, MIDNIGHT_STARS_THEME];
 
 export default function EditorScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, experienceId: paramExpId } = useLocalSearchParams<{ id: string; experienceId?: string }>();
   const router = useRouter();
 
-  const starterTemplate = getTemplateById(id || 'playful-yes-no') || getTemplateById('playful-yes-no')!;
+  // Determine if editing an existing experience or creating from a template
+  const [existingExperienceId, setExistingExperienceId] = useState<string | null>(paramExpId || null);
+  const [activeTemplateId, setActiveTemplateId] = useState<string>(id || 'playful-yes-no');
+  const [existingSlug, setExistingSlug] = useState<string | null>(null);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(false);
 
-  const [creatorName, setCreatorName] = useState('Daniel');
-  const [recipientName, setRecipientName] = useState('Alikah');
+  const starterTemplate = getTemplateById(activeTemplateId) || getTemplateById('playful-yes-no')!;
+
+  const [creatorName, setCreatorName] = useState('');
+  const [recipientName, setRecipientName] = useState('');
   const [title, setTitle] = useState(starterTemplate.defaultConfig.title);
   const [selectedTheme, setSelectedTheme] = useState(starterTemplate.defaultConfig.theme);
   const [musicEnabled, setMusicEnabled] = useState(starterTemplate.defaultConfig.music.enabled);
@@ -45,11 +54,66 @@ export default function EditorScreen() {
     'I made this little thing just to give you a reason to smile today. ❤️'
   );
 
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const handlePublish = async () => {
-    // Construct updated config
-    const updatedScenes = starterTemplate.defaultConfig.scenes.map((scene) => {
+  // Initial load: resolve session & check if loading an existing experience
+  useEffect(() => {
+    async function initializeEditor() {
+      // 1. Resolve user profile for default creator name if empty
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const userMeta = session.user.user_metadata;
+          const userDisplayName = userMeta?.display_name || session.user.email?.split('@')[0] || '';
+          setCreatorName((prev) => prev || userDisplayName);
+        }
+
+        const partnerState = await partnerService.getPartnerState();
+        if (partnerState.state === 'connected' && partnerState.partnerName && !paramExpId) {
+          setRecipientName((prev) => prev || partnerState.partnerName || '');
+        }
+      } catch {
+        // Fallback
+      }
+
+      // 2. Check if paramExpId or id is an existing experience ID
+      const targetId = paramExpId || id;
+      if (targetId && !getTemplateById(targetId)) {
+        setIsLoadingExisting(true);
+        try {
+          const existing = await experienceService.getExperienceById(targetId);
+          if (existing) {
+            setExistingExperienceId(existing.id);
+            setActiveTemplateId(existing.templateId);
+            setExistingSlug(existing.slug);
+            setCreatorName(existing.creatorName || '');
+            setRecipientName(existing.recipientName || '');
+            setTitle(existing.title || '');
+            setSelectedTheme(existing.config.theme || DEFAULT_ROMANTIC_THEME);
+            setMusicEnabled(!!existing.config.music?.enabled);
+
+            const firstGreeting = existing.config.scenes.find((s) => s.type === 'greeting');
+            if (firstGreeting) setHeadline(firstGreeting.title);
+
+            const letterScene = existing.config.scenes.find((s) => s.type === 'letter');
+            if (letterScene && letterScene.bodyText) setLetterBody(letterScene.bodyText);
+          }
+        } catch (err) {
+          console.warn('Could not load existing experience:', err);
+        } finally {
+          setIsLoadingExisting(false);
+        }
+      }
+    }
+
+    initializeEditor();
+  }, [id, paramExpId]);
+
+  // Construct config object from current state
+  const buildCurrentConfig = () => {
+    const template = getTemplateById(activeTemplateId) || starterTemplate;
+    const updatedScenes = template.defaultConfig.scenes.map((scene) => {
       if (scene.type === 'greeting') {
         return { ...scene, title: headline };
       }
@@ -59,17 +123,109 @@ export default function EditorScreen() {
       return scene;
     });
 
-    const newConfig = {
-      ...starterTemplate.defaultConfig,
-      creatorName,
-      recipientName,
-      title,
+    return {
+      ...template.defaultConfig,
+      creatorName: creatorName.trim(),
+      recipientName: recipientName.trim(),
+      title: title.trim(),
       theme: selectedTheme,
-      music: { ...starterTemplate.defaultConfig.music, enabled: musicEnabled },
+      music: { ...template.defaultConfig.music, enabled: musicEnabled },
       scenes: updatedScenes
     };
+  };
 
-    // Zod validation check
+  // Validate fields before saving
+  const validateInputs = () => {
+    if (!creatorName.trim()) {
+      Alert.alert('Missing Name', 'Please enter your name so your recipient knows who this is from.');
+      return false;
+    }
+    if (!recipientName.trim()) {
+      Alert.alert('Missing Recipient', 'Please enter your recipient’s name.');
+      return false;
+    }
+    return true;
+  };
+
+  // 1. SAVE DRAFT HANDLER
+  const handleSaveDraft = async () => {
+    if (!validateInputs()) return;
+
+    const newConfig = buildCurrentConfig();
+    const validation = ExperienceConfigSchema.safeParse(newConfig);
+    if (!validation.success) {
+      Alert.alert('Validation Error', validation.error.issues[0]?.message || 'Invalid experience configuration');
+      return;
+    }
+
+    setIsSavingDraft(true);
+    try {
+      const expId = existingExperienceId || `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const slug = existingSlug || generateSlug(recipientName.trim() || 'surprise');
+      const now = new Date().toISOString();
+
+      const draftExperience: Experience = {
+        id: expId,
+        userId: 'local-guest', // Will be overridden dynamically in experienceService if authenticated
+        templateId: activeTemplateId,
+        title: title.trim() || `${recipientName}'s Surprise`,
+        creatorName: creatorName.trim(),
+        recipientName: recipientName.trim(),
+        slug,
+        config: newConfig,
+        status: 'draft',
+        publishedAt: null,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await experienceService.saveExperience(draftExperience, false);
+      setExistingExperienceId(expId);
+      setExistingSlug(slug);
+      setIsSavingDraft(false);
+
+      Alert.alert(
+        'Draft Saved 📝',
+        'Your surprise has been saved. You can continue customizing or publish when you are ready.',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'View in My Surprises',
+            onPress: () => router.push('/(tabs)/my-experiences')
+          }
+        ]
+      );
+    } catch (err: any) {
+      setIsSavingDraft(false);
+      Alert.alert('Error Saving Draft', err?.message || 'Could not save draft.');
+    }
+  };
+
+  // 2. PUBLISH SURPRISE HANDLER
+  const handlePublish = async () => {
+    if (!validateInputs()) return;
+
+    // Verify authentication with Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      Alert.alert(
+        'Sign In Required to Publish 💖',
+        'To generate a live public link for your recipient, please sign in or create an account. You can also save your progress as a draft.',
+        [
+          {
+            text: 'Save as Draft',
+            onPress: () => handleSaveDraft()
+          },
+          {
+            text: 'Sign In / Register',
+            onPress: () => router.push('/(auth)/sign-in')
+          }
+        ]
+      );
+      return;
+    }
+
+    const newConfig = buildCurrentConfig();
     const validation = ExperienceConfigSchema.safeParse(newConfig);
     if (!validation.success) {
       Alert.alert('Validation Error', validation.error.issues[0]?.message || 'Invalid experience configuration');
@@ -77,16 +233,17 @@ export default function EditorScreen() {
     }
 
     setIsPublishing(true);
-    const slug = generateSlug(recipientName);
-
+    const slug = existingSlug || generateSlug(recipientName.trim());
     const now = new Date().toISOString();
-    const newExperience: Experience = {
-      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      userId: 'user-demo',
-      templateId: starterTemplate.id,
-      title: title || `${recipientName}'s Surprise`,
-      creatorName,
-      recipientName,
+    const expId = existingExperienceId || `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    const publishedExperience: Experience = {
+      id: expId,
+      userId: session.user.id,
+      templateId: activeTemplateId,
+      title: title.trim() || `${recipientName}'s Surprise`,
+      creatorName: creatorName.trim(),
+      recipientName: recipientName.trim(),
       slug,
       config: newConfig,
       status: 'published',
@@ -96,11 +253,18 @@ export default function EditorScreen() {
     };
 
     try {
-      await experienceService.saveExperience(newExperience);
+      // Require cloud sync verification
+      await experienceService.saveExperience(publishedExperience, true);
+      setExistingExperienceId(expId);
+      setExistingSlug(slug);
       setIsPublishing(false);
+
+      const baseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
+      const publicUrl = `${baseUrl.replace(/\/$/, '')}/e/${slug}`;
+
       Alert.alert(
         'Surprise Published! 💖',
-        `Your unique link is ready: https://luvmee.vercel.app/e/${slug}`,
+        `Your unique romantic link is live and ready to share:\n\n${publicUrl}`,
         [
           {
             text: 'View in My Surprises',
@@ -110,12 +274,34 @@ export default function EditorScreen() {
       );
     } catch (err: any) {
       setIsPublishing(false);
-      Alert.alert('Publish Error', err?.message || 'Failed to save experience');
+      Alert.alert(
+        'Publishing Failed',
+        err?.message || 'Could not connect to Supabase cloud. Please check your internet connection and verify you are signed in.'
+      );
     }
   };
 
+  if (isLoadingExisting) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={THEME.colors.rose} />
+        <Text style={{ marginTop: 12, color: THEME.colors.burgundy, fontWeight: '600' }}>
+          Loading surprise...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Existing draft notice banner */}
+      {existingExperienceId ? (
+        <View style={styles.draftBanner}>
+          <Sparkles size={16} color={THEME.colors.rose} />
+          <Text style={styles.draftBannerText}>Editing saved surprise</Text>
+        </View>
+      ) : null}
+
       {/* Step 1: Who is this for? */}
       <Card>
         <Text style={styles.cardHeader}>1. Who is this surprise for?</Text>
@@ -123,13 +309,13 @@ export default function EditorScreen() {
           label="Your Name (Creator)"
           value={creatorName}
           onChangeText={setCreatorName}
-          placeholder="e.g. Daniel"
+          placeholder="e.g. Jordan"
         />
         <Input
           label="Recipient Name"
           value={recipientName}
           onChangeText={setRecipientName}
-          placeholder="e.g. Alikah"
+          placeholder="e.g. Taylor"
         />
         <Input
           label="Experience Title"
@@ -204,21 +390,48 @@ export default function EditorScreen() {
       </Card>
 
       {/* Actions */}
-      <View style={styles.actionButtons}>
+      <View style={styles.actionContainer}>
+        {/* Preview Button */}
         <Button
           title="Preview Surprise"
           variant="outline"
           icon={<Eye size={16} color={THEME.colors.burgundy} />}
-          onPress={() => router.push(`/preview/${starterTemplate.id}`)}
-          style={{ flex: 1 }}
+          onPress={() => {
+            router.push({
+              pathname: '/preview/[id]',
+              params: {
+                id: activeTemplateId,
+                creator: creatorName || 'Someone Special',
+                recipient: recipientName || 'My Love',
+                title: title,
+                themeId: selectedTheme.id,
+                headline: headline,
+                letter: letterBody,
+                music: musicEnabled ? '1' : '0'
+              }
+            } as any);
+          }}
+          style={{ marginBottom: 12 }}
         />
-        <Button
-          title="Publish Surprise"
-          icon={<Send size={16} color="#FFFFFF" />}
-          loading={isPublishing}
-          onPress={handlePublish}
-          style={{ flex: 1 }}
-        />
+
+        {/* Primary Save & Publish Actions */}
+        <View style={styles.actionButtons}>
+          <Button
+            title="Save Draft"
+            variant="outline"
+            icon={<BookmarkCheck size={16} color={THEME.colors.rose} />}
+            loading={isSavingDraft}
+            onPress={handleSaveDraft}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="Publish Surprise"
+            icon={<Send size={16} color="#FFFFFF" />}
+            loading={isPublishing}
+            onPress={handlePublish}
+            style={{ flex: 1 }}
+          />
+        </View>
       </View>
     </ScrollView>
   );
@@ -231,6 +444,21 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20
+  },
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(232, 93, 117, 0.12)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: THEME.radius.md,
+    marginBottom: 16
+  },
+  draftBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.rose
   },
   cardHeader: {
     fontSize: 16,
@@ -305,9 +533,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF'
   },
+  actionContainer: {
+    marginBottom: 40
+  },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 40
+    gap: 12
   }
 });

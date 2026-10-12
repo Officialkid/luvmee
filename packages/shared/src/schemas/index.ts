@@ -88,3 +88,17 @@ export const RecipientResponseSchema = z.object({
   responseType: z.enum(['yes', 'custom_note']),
   responseValue: z.string().trim().min(1).max(500)
 });
+
+export const PartnerCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^(LUV-)?[2-9a-zA-Z]{4}$/i, 'Invalid partner code format (expected 4 characters or LUV-XXXX)');
+
+export const SendPartnerInvitationSchema = z.object({
+  target: z.string().trim().min(3, 'Partner code or email must be at least 3 characters').max(100)
+});
+
+export const RespondPartnerInvitationSchema = z.object({
+  invitationId: z.string().uuid('Invalid invitation ID'),
+  decision: z.enum(['accept', 'decline'])
+});

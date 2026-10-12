@@ -2,7 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { Experience, getTemplateById } from '@luvmee/shared';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  '';
 
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
@@ -18,7 +21,6 @@ export async function getPublishedExperienceBySlug(slug: string): Promise<Experi
       .from('experiences')
       .select('*')
       .eq('slug', slug)
-      .eq('status', 'published')
       .maybeSingle();
 
     if (!error && data) {
@@ -39,8 +41,8 @@ export async function getPublishedExperienceBySlug(slug: string): Promise<Experi
     }
   }
 
-  // Fallback demo experiences for local preview / testing
-  if (slug === 'demo' || slug.startsWith('for-')) {
+  // Fallback demo experience for landing page demo preview
+  if (slug === 'demo') {
     const defaultTemplate = getTemplateById('playful-yes-no')!;
     return {
       id: '00000000-0000-0000-0000-000000000001',
@@ -48,8 +50,8 @@ export async function getPublishedExperienceBySlug(slug: string): Promise<Experi
       templateId: 'playful-yes-no',
       title: 'A Little Surprise For You',
       creatorName: 'Someone Special',
-      recipientName: slug.replace(/^for-/, '').replace(/-[a-z0-9]+$/, '') || 'My Favorite Person',
-      slug,
+      recipientName: 'My Favorite Person',
+      slug: 'demo',
       config: defaultTemplate.defaultConfig,
       status: 'published',
       publishedAt: new Date().toISOString(),

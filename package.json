@@ -25,5 +25,8 @@
     "nextjs",
     "supabase"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "^15.1.0"
+  }
 }

@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --outDir dist",
-    "test": "node test/shared.test.mjs",
+    "test": "node test/shared.test.mjs && node test/partner.test.mjs && node test/partner-lifecycle.test.mjs",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

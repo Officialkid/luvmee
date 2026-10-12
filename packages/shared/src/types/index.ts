@@ -115,6 +115,43 @@ export interface UserProfile {
   id: string;
   displayName: string;
   avatarUrl?: string;
+  partnerCode?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PartnerConnectionState =
+  | 'not_connected'
+  | 'outgoing_pending'
+  | 'incoming_pending'
+  | 'connected';
+
+export interface PartnerSummary {
+  id: string;
+  displayName: string;
+  avatarUrl?: string;
+  partnerCode?: string;
+}
+
+export interface PartnerState {
+  state: PartnerConnectionState;
+  partnershipId?: string;
+  partnerId?: string;
+  partnerName?: string;
+  partnerAvatar?: string;
+  partnerCode?: string;
+  connectedAt?: string;
+  daysInLove?: number;
+  invitationId?: string;
+  createdAt?: string;
+  myPartnerCode?: string | null;
+}
+
+export interface PartnerInvitation {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   createdAt: string;
   updatedAt: string;
 }

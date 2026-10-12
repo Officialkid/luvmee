@@ -44,3 +44,24 @@ test('All starter templates conform to ExperienceConfigSchema', () => {
     assert.strictEqual(parsed.success, true, `Template ${t.id} failed schema validation`);
   }
 });
+
+test('interpolatePlaceholders handles missing creator or recipient gracefully', () => {
+  const template = 'For {recipientName} from {creatorName}';
+  const result = interpolatePlaceholders(template, '', '');
+  assert.strictEqual(result, 'For Someone Special from Someone Special');
+
+  const undefinedResult = interpolatePlaceholders(template, undefined, undefined);
+  assert.strictEqual(undefinedResult, 'For Someone Special from Someone Special');
+});
+
+test('generateSlug handles empty, special characters, and numeric inputs safely', () => {
+  const slugEmpty = generateSlug('');
+  assert.match(slugEmpty, /^for-special-one-[a-z0-9]+$/);
+
+  const slugSpecial = generateSlug('!@#$%^&*()_+');
+  assert.match(slugSpecial, /^for-special-one-[a-z0-9]+$/);
+
+  const slugNormal = generateSlug('Alex');
+  assert.match(slugNormal, /^for-alex-[a-z0-9]+$/);
+});
+

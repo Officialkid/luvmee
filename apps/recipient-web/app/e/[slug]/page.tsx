@@ -1,22 +1,31 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Sparkles } from 'lucide-react';
 import { getPublishedExperienceBySlug } from '@/lib/supabase';
 import ExperienceRenderer from './ExperienceRenderer';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const experience = await getPublishedExperienceBySlug(params.slug);
+  const { slug } = await params;
+  const experience = await getPublishedExperienceBySlug(slug);
 
   if (!experience) {
     return {
       title: 'Surprise Not Found | LUVMEE'
+    };
+  }
+
+  if (experience.status === 'draft') {
+    return {
+      title: 'Surprise in Progress | LUVMEE'
     };
   }
 
@@ -32,10 +41,38 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ExperiencePage({ params }: PageProps) {
-  const experience = await getPublishedExperienceBySlug(params.slug);
+  const { slug } = await params;
+  const experience = await getPublishedExperienceBySlug(slug);
 
   if (!experience) {
     notFound();
+  }
+
+  if (experience.status === 'draft') {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white/90 backdrop-blur-md rounded-3xl p-8 border border-luvmee-rose/20 shadow-xl">
+          <div className="w-16 h-16 bg-luvmee-blush rounded-full flex items-center justify-center mx-auto mb-4 text-luvmee-rose">
+            <Sparkles className="w-8 h-8 text-luvmee-rose" />
+          </div>
+          <span className="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-wider mb-3">
+            Draft In Progress
+          </span>
+          <h1 className="font-serif text-2xl font-bold text-luvmee-burgundy mb-2">
+            Surprise Still In The Works ✨
+          </h1>
+          <p className="text-luvmee-burgundy-soft text-sm leading-relaxed mb-6">
+            This surprise is still being prepared by its creator. Please check back once it has been officially published!
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-luvmee-rose to-rose-600 text-white font-semibold text-sm shadow-md hover:scale-105 active:scale-95 transition-transform"
+          >
+            Explore LUVMEE
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return <ExperienceRenderer experience={experience} />;

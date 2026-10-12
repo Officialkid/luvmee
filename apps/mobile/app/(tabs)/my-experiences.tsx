@@ -22,13 +22,15 @@ import {
   MoreVertical,
   CheckCircle2,
   Clock,
-  Sparkles
+  Sparkles,
+  Pencil
 } from 'lucide-react-native';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Experience, ExperienceStatus } from '@luvmee/shared';
 import { experienceService } from '../../services/experienceService';
+import { supabase } from '../../services/supabase';
 
 export default function MyExperiencesScreen() {
   const router = useRouter();
@@ -62,7 +64,8 @@ export default function MyExperiencesScreen() {
   });
 
   const getPublicUrl = (slug: string) => {
-    return `https://luvmee.vercel.app/e/${slug}`;
+    const baseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
+    return `${baseUrl.replace(/\/$/, '')}/e/${slug}`;
   };
 
   const handleShare = async (exp: Experience) => {
@@ -87,6 +90,22 @@ export default function MyExperiencesScreen() {
 
   const handleTogglePublish = async (exp: Experience) => {
     const willPublish = exp.status !== 'published';
+
+    if (willPublish) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        Alert.alert(
+          'Sign In Required 💖',
+          'To publish this surprise to the web, please sign in or register first.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => router.push('/(auth)/sign-in') }
+          ]
+        );
+        return;
+      }
+    }
+
     Alert.alert(
       willPublish ? 'Publish Experience?' : 'Unpublish Experience?',
       willPublish
@@ -97,8 +116,12 @@ export default function MyExperiencesScreen() {
         {
           text: willPublish ? 'Publish' : 'Unpublish',
           onPress: async () => {
-            await experienceService.togglePublish(exp.id);
-            await loadExperiences();
+            try {
+              await experienceService.togglePublish(exp.id);
+              await loadExperiences();
+            } catch (err: any) {
+              Alert.alert('Publishing Error', err?.message || 'Could not update publication state.');
+            }
           }
         }
       ]
@@ -129,101 +152,121 @@ export default function MyExperiencesScreen() {
     );
   };
 
+  const openEditorForExperience = (exp: Experience) => {
+    router.push({
+      pathname: '/editor/[id]',
+      params: { id: exp.templateId, experienceId: exp.id }
+    } as any);
+  };
+
   const renderExperienceItem = ({ item }: { item: Experience }) => {
     const isPublished = item.status === 'published';
     const isCopied = copiedId === item.id;
 
     return (
-      <Card style={styles.card}>
-        {/* Top meta row */}
-        <View style={styles.cardHeaderRow}>
-          <View style={styles.recipientBadge}>
-            <Heart size={14} color={THEME.colors.rose} />
-            <Text style={styles.recipientText}>For {item.recipientName}</Text>
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.statusBadge,
-              isPublished ? styles.statusPublished : styles.statusDraft
-            ]}
-            onPress={() => handleTogglePublish(item)}
-          >
-            {isPublished ? (
-              <CheckCircle2 size={12} color="#166534" />
-            ) : (
-              <Clock size={12} color="#854d0e" />
-            )}
-            <Text
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => !isPublished && openEditorForExperience(item)}
+      >
+        <Card style={styles.card}>
+          {/* Top meta row */}
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.recipientBadge}>
+              <Heart size={14} color={THEME.colors.rose} />
+              <Text style={styles.recipientText}>For {item.recipientName}</Text>
+            </View>
+            <TouchableOpacity
               style={[
-                styles.statusText,
-                isPublished ? styles.statusTextPublished : styles.statusTextDraft
+                styles.statusBadge,
+                isPublished ? styles.statusPublished : styles.statusDraft
               ]}
+              onPress={() => handleTogglePublish(item)}
             >
-              {isPublished ? 'Published' : 'Draft'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              {isPublished ? (
+                <CheckCircle2 size={12} color="#166534" />
+              ) : (
+                <Clock size={12} color="#854d0e" />
+              )}
+              <Text
+                style={[
+                  styles.statusText,
+                  isPublished ? styles.statusTextPublished : styles.statusTextDraft
+                ]}
+              >
+                {isPublished ? 'Published' : 'Draft'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Experience Title */}
-        <Text style={styles.experienceTitle}>{item.title}</Text>
-        <Text style={styles.metaDate}>
-          {isPublished && item.publishedAt
-            ? `Published on ${new Date(item.publishedAt).toLocaleDateString()}`
-            : `Created on ${new Date(item.createdAt).toLocaleDateString()}`}
-        </Text>
+          {/* Experience Title */}
+          <Text style={styles.experienceTitle}>{item.title}</Text>
+          <Text style={styles.metaDate}>
+            {isPublished && item.publishedAt
+              ? `Published on ${new Date(item.publishedAt).toLocaleDateString()}`
+              : `Created on ${new Date(item.createdAt).toLocaleDateString()}`}
+          </Text>
 
-        {/* Action Buttons */}
-        <View style={styles.actionRow}>
-          {isPublished && (
-            <>
+          {/* Action Buttons */}
+          <View style={styles.actionRow}>
+            {isPublished ? (
+              <>
+                <TouchableOpacity
+                  style={styles.actionBtnPrimary}
+                  onPress={() => handleShare(item)}
+                >
+                  <Share2 size={15} color="#FFFFFF" />
+                  <Text style={styles.actionBtnPrimaryText}>Share</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionBtnSecondary}
+                  onPress={() => handleCopyLink(item)}
+                >
+                  {isCopied ? (
+                    <CopyCheck size={15} color={THEME.colors.rose} />
+                  ) : (
+                    <Copy size={15} color={THEME.colors.rose} />
+                  )}
+                  <Text style={styles.actionBtnSecondaryText}>
+                    {isCopied ? 'Copied' : 'Link'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <TouchableOpacity
                 style={styles.actionBtnPrimary}
-                onPress={() => handleShare(item)}
+                onPress={() => openEditorForExperience(item)}
               >
-                <Share2 size={15} color="#FFFFFF" />
-                <Text style={styles.actionBtnPrimaryText}>Share</Text>
+                <Pencil size={15} color="#FFFFFF" />
+                <Text style={styles.actionBtnPrimaryText}>Edit</Text>
               </TouchableOpacity>
+            )}
 
-              <TouchableOpacity
-                style={styles.actionBtnSecondary}
-                onPress={() => handleCopyLink(item)}
-              >
-                {isCopied ? (
-                  <CopyCheck size={15} color={THEME.colors.rose} />
-                ) : (
-                  <Copy size={15} color={THEME.colors.rose} />
-                )}
-                <Text style={styles.actionBtnSecondaryText}>
-                  {isCopied ? 'Copied' : 'Link'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
+            <TouchableOpacity
+              style={styles.actionBtnSecondary}
+              onPress={() => router.push(`/preview/${item.templateId}`)}
+            >
+              <ExternalLink size={15} color={THEME.colors.burgundy} />
+              <Text style={styles.actionBtnNeutralText}>Preview</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionBtnSecondary}
-            onPress={() => router.push(`/preview/${item.templateId}`)}
-          >
-            <ExternalLink size={15} color={THEME.colors.burgundy} />
-            <Text style={styles.actionBtnNeutralText}>Preview</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtnSecondary}
+              onPress={() => handleDuplicate(item)}
+            >
+              <Sparkles size={15} color={THEME.colors.muted} />
+              <Text style={styles.actionBtnMutedText}>Copy</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionBtnSecondary}
-            onPress={() => handleDuplicate(item)}
-          >
-            <Sparkles size={15} color={THEME.colors.muted} />
-            <Text style={styles.actionBtnMutedText}>Copy</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtnDanger}
-            onPress={() => handleDelete(item)}
-          >
-            <Trash2 size={15} color="#DC2626" />
-          </TouchableOpacity>
-        </View>
-      </Card>
+            <TouchableOpacity
+              style={styles.actionBtnDanger}
+              onPress={() => handleDelete(item)}
+            >
+              <Trash2 size={15} color="#DC2626" />
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </TouchableOpacity>
     );
   };
 

@@ -15,6 +15,7 @@ import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { supabase } from '../../services/supabase';
 
 export default function SignUpScreen() {
@@ -75,9 +76,7 @@ export default function SignUpScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.brandContainer}>
-          <View style={styles.sparkleCircle}>
-            <Sparkles size={32} color={THEME.colors.rose} />
-          </View>
+          <Logo variant="stacked" width={160} height={125} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>Join LUVMEE</Text>
           <Text style={styles.subtitle}>
             Create unforgettable digital romantic moments with custom links.
@@ -87,7 +86,7 @@ export default function SignUpScreen() {
         <Card style={styles.formCard}>
           <Input
             label="Your Name or Nickname"
-            placeholder="e.g. Daniel"
+            placeholder="e.g. John"
             value={displayName}
             onChangeText={setDisplayName}
           />

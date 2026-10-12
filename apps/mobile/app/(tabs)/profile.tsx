@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
   User,
   Heart,
@@ -21,32 +21,64 @@ import {
   ExternalLink,
   ChevronRight
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../services/supabase';
 import { experienceService } from '../../services/experienceService';
+import { partnerService } from '../../services/partnerService';
+import { PartnerState } from '@luvmee/shared';
+import { PartnerConnectModal } from '../../components/PartnerConnectModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [partnerState, setPartnerState] = useState<PartnerState>({
+    state: 'not_connected',
+    myPartnerCode: null
+  });
+  const [connectModalVisible, setConnectModalVisible] = useState(false);
   const [stats, setStats] = useState({ total: 0, published: 0 });
 
   useEffect(() => {
     checkUser();
     loadStats();
+    loadPartner();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkUser();
+      loadStats();
+      loadPartner();
+    }, [])
+  );
 
   const checkUser = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
+      if (session?.user) {
+        setUserEmail(session.user.email || null);
+        const metaName = session.user.user_metadata?.display_name || session.user.email?.split('@')[0];
+        setUserName(metaName || 'Romantic Creator');
       } else {
         setUserEmail(null);
+        setUserName(null);
       }
     } catch {
       setUserEmail(null);
+      setUserName(null);
+    }
+  };
+
+  const loadPartner = async () => {
+    try {
+      const state = await partnerService.getPartnerState();
+      setPartnerState(state);
+    } catch {
+      // Fallback
     }
   };
 
@@ -69,6 +101,8 @@ export default function ProfileScreen() {
         onPress: async () => {
           await supabase.auth.signOut();
           setUserEmail(null);
+          setUserName(null);
+          await loadPartner();
           Alert.alert('Signed Out', 'You are now in local guest mode.');
         }
       }
@@ -77,18 +111,17 @@ export default function ProfileScreen() {
 
   const handleResetData = () => {
     Alert.alert(
-      'Reset Sample Data',
-      'This will reload default starter surprises in local storage.',
+      'Reset Data',
+      'This will clear local cache and re-fetch from cloud.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reset',
           onPress: async () => {
-            // Re-seed by deleting storage key
-            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
             await AsyncStorage.removeItem('@luvmee_experiences_v1');
             await loadStats();
-            Alert.alert('Reset Complete', 'Default starter surprises restored.');
+            await loadPartner();
+            Alert.alert('Reset Complete', 'Local cache refreshed.');
           }
         }
       ]
@@ -107,26 +140,126 @@ export default function ProfileScreen() {
         {/* User Card */}
         <Card style={styles.userCard}>
           <View style={styles.avatarCircle}>
-            <Text style={{ fontSize: 32 }}>💝</Text>
+            <Text style={{ fontSize: 32 }}>🤵🏽</Text>
           </View>
           <Text style={styles.userName}>
-            {userEmail ? userEmail.split('@')[0] : 'Romantic Creator'}
+            {userName || 'Guest Creator'}
           </Text>
           <Text style={styles.userEmail}>
-            {userEmail ? userEmail : 'Guest Mode (Local Storage)'}
+            {userEmail ? userEmail : 'Guest Mode • Sign in to sync across devices'}
           </Text>
+
+          {partnerState.myPartnerCode ? (
+            <TouchableOpacity
+              style={styles.partnerCodeBanner}
+              onPress={() => setConnectModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.partnerCodeBannerLabel}>YOUR PARTNER CODE:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.partnerCodeBannerCode}>{partnerState.myPartnerCode}</Text>
+                <Share2 size={13} color={THEME.colors.rose} />
+              </View>
+            </TouchableOpacity>
+          ) : null}
 
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{stats.total}</Text>
-              <Text style={styles.statLabel}>Total Created</Text>
+              <Text style={styles.statLabel}>Surprises Created</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{stats.published}</Text>
-              <Text style={styles.statLabel}>Published</Text>
+              <Text style={styles.statLabel}>Published & Sent</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>
+                {partnerState.state === 'connected' && partnerState.daysInLove !== undefined
+                  ? partnerState.daysInLove
+                  : '—'}
+              </Text>
+              <Text style={styles.statLabel}>Days in Love</Text>
             </View>
           </View>
+        </Card>
+
+        {/* Partner Connection Card */}
+        <Text style={styles.sectionHeading}>Connected Partner</Text>
+        <Card style={styles.userCard}>
+          {partnerState.state === 'connected' ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: 14 }}>
+                <View style={[styles.avatarCircle, { width: 52, height: 52, borderRadius: 26, marginBottom: 0 }]}>
+                  <Text style={{ fontSize: 26 }}>👸🏽</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.userName}>{partnerState.partnerName || 'Partner'}</Text>
+                    <View style={{ backgroundColor: 'rgba(232, 93, 117, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.colors.rose }}>Partner</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.userEmail}>Connected Partner • Love Notes Enabled</Text>
+                </View>
+              </View>
+              <View style={{ width: '100%', gap: 10 }}>
+                <Button
+                  title="Open Love Notes & Sparks"
+                  onPress={() => router.push('/(tabs)/messages')}
+                />
+                <TouchableOpacity
+                  style={styles.managePartnerBtn}
+                  onPress={() => setConnectModalVisible(true)}
+                >
+                  <Text style={styles.managePartnerText}>Manage Connection / Disconnect</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : partnerState.state === 'incoming_pending' ? (
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>💌</Text>
+              <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
+                Incoming Request: {partnerState.partnerName || 'Partner'}
+              </Text>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+                Wants to connect as your partner on LUVMEE.
+              </Text>
+              <Button
+                title="Review & Accept 💕"
+                onPress={() => setConnectModalVisible(true)}
+              />
+            </View>
+          ) : partnerState.state === 'outgoing_pending' ? (
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>⏳</Text>
+              <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
+                Invite Sent to {partnerState.partnerName || 'Partner'}
+              </Text>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+                Waiting for your partner to accept your connection request.
+              </Text>
+              <Button
+                title="View Status / Cancel"
+                onPress={() => setConnectModalVisible(true)}
+              />
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>💌</Text>
+              <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
+                No Partner Connected Yet
+              </Text>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+                Invite your partner to connect, exchange daily love sparks, and see relationship milestones together.
+              </Text>
+              <Button
+                title="Connect With Partner"
+                onPress={() => setConnectModalVisible(true)}
+              />
+            </View>
+          )}
         </Card>
 
         {/* Auth CTA if guest */}
@@ -202,9 +335,16 @@ export default function ProfileScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerApp}>LUVMEE V1.0.0</Text>
-          <Text style={styles.footerNote}>Crafted with ❤️ for Alikah & romantic creators worldwide</Text>
+          <Text style={styles.footerNote}>Crafted with ❤️ for romantic creators worldwide</Text>
         </View>
       </ScrollView>
+
+      <PartnerConnectModal
+        visible={connectModalVisible}
+        onClose={() => setConnectModalVisible(false)}
+        partnerState={partnerState}
+        onStateChange={loadPartner}
+      />
     </SafeAreaView>
   );
 }
@@ -382,5 +522,42 @@ const styles = StyleSheet.create({
     color: THEME.colors.muted,
     marginTop: 4,
     textAlign: 'center'
+  },
+  partnerCodeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(232, 93, 117, 0.08)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 93, 117, 0.2)',
+    width: '100%',
+    marginBottom: 14
+  },
+  partnerCodeBannerLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: THEME.colors.rose,
+    letterSpacing: 0.8
+  },
+  partnerCodeBannerCode: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.colors.burgundy,
+    letterSpacing: 1
+  },
+  managePartnerBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 93, 117, 0.3)'
+  },
+  managePartnerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.colors.rose
   }
 });

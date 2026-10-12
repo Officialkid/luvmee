@@ -1,67 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
-import { Experience, STARTER_TEMPLATES, generateSlug } from '@luvmee/shared';
+import { Experience, generateSlug } from '@luvmee/shared';
 
 const STORAGE_KEY = '@luvmee_experiences_v1';
 
-// Initial sample experiences if user has not created any yet
-const INITIAL_EXPERIENCES: Experience[] = [
-  {
-    id: 'exp-alikah-sample-1',
-    userId: 'user-demo',
-    templateId: 'playful-yes-no',
-    title: "Alikah's Surprise 💖",
-    creatorName: 'Daniel',
-    recipientName: 'Alikah',
-    slug: 'for-alikah-love',
-    config: {
-      ...STARTER_TEMPLATES[0].defaultConfig,
-      creatorName: 'Daniel',
-      recipientName: 'Alikah',
-      title: "Hii Alikah! How is your day going? ✨"
-    },
-    status: 'published',
-    publishedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
-  },
-  {
-    id: 'exp-draft-sample-2',
-    userId: 'user-demo',
-    templateId: 'digital-love-letter',
-    title: 'A Little Note For You',
-    creatorName: 'Daniel',
-    recipientName: 'Alikah',
-    slug: 'a-little-note-draft',
-    config: {
-      ...STARTER_TEMPLATES[1].defaultConfig,
-      creatorName: 'Daniel',
-      recipientName: 'Alikah',
-      title: 'A Little Note For You'
-    },
-    status: 'draft',
-    publishedAt: null,
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 12).toISOString()
-  }
-];
-
 export const experienceService = {
+  /**
+   * Retrieves all experiences belonging to the active user (or local guest drafts).
+   * Synchronizes with Supabase cloud when authenticated.
+   */
   async getExperiences(): Promise<Experience[]> {
     try {
-      // 1. Check local storage
+      // 1. Read local storage cache
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      let localList: Experience[] = [];
+      let localList: Experience[] = stored ? JSON.parse(stored) : [];
 
-      if (stored) {
-        localList = JSON.parse(stored);
-      } else {
-        // Initialize with default sample experiences
-        localList = INITIAL_EXPERIENCES;
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localList));
-      }
-
-      // 2. If authenticated with Supabase, attempt remote sync
+      // 2. If authenticated with Supabase, query cloud experiences
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -71,7 +25,7 @@ export const experienceService = {
             .eq('user_id', session.user.id)
             .order('updated_at', { ascending: false });
 
-          if (!error && data && data.length > 0) {
+          if (!error && data) {
             // Map db snake_case to Experience camelCase
             const remoteList: Experience[] = data.map((item: any) => ({
               id: item.id,
@@ -87,67 +41,116 @@ export const experienceService = {
               createdAt: item.created_at,
               updatedAt: item.updated_at
             }));
+
+            // Sync remote list back into local cache
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remoteList));
             return remoteList;
           }
         }
       } catch (err) {
-        // Fallback gracefully to local storage
+        // Fallback gracefully to local cache when offline
+        console.warn('Network sync skipped, using local cache:', err);
       }
 
       return localList;
     } catch (error) {
       console.warn('Error fetching experiences:', error);
-      return INITIAL_EXPERIENCES;
+      return [];
     }
   },
 
+  /**
+   * Finds a specific experience by ID.
+   */
   async getExperienceById(id: string): Promise<Experience | null> {
     const all = await this.getExperiences();
     return all.find((exp) => exp.id === id) || null;
   },
 
-  async saveExperience(experience: Experience): Promise<Experience> {
+  /**
+   * Saves an experience.
+   * If published or requireCloudSync=true, requires Supabase authentication and verifies cloud persistence.
+   */
+  async saveExperience(experience: Experience, requireCloudSync = false): Promise<Experience> {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      let list: Experience[] = stored ? JSON.parse(stored) : INITIAL_EXPERIENCES;
+      // Resolve active Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      const authenticatedUserId = session?.user?.id;
 
-      const existingIndex = list.findIndex((e) => e.id === experience.id);
+      // Ensure experience user ID reflects active session
+      const preparedExperience: Experience = {
+        ...experience,
+        userId: authenticatedUserId || experience.userId || 'local-guest',
+        updatedAt: new Date().toISOString()
+      };
+
+      // If publishing, require authentication to guarantee cloud reachability
+      if (preparedExperience.status === 'published' || requireCloudSync) {
+        if (!authenticatedUserId) {
+          throw new Error('Authentication is required to publish live surprises to the web. Please sign in or register.');
+        }
+
+        // Perform Supabase upsert
+        const { error: dbError } = await supabase.from('experiences').upsert({
+          id: preparedExperience.id,
+          user_id: authenticatedUserId,
+          template_id: preparedExperience.templateId,
+          title: preparedExperience.title,
+          creator_name: preparedExperience.creatorName,
+          recipient_name: preparedExperience.recipientName,
+          slug: preparedExperience.slug,
+          config: preparedExperience.config,
+          status: preparedExperience.status,
+          published_at: preparedExperience.publishedAt
+        });
+
+        if (dbError) {
+          console.error('Supabase write error:', dbError);
+          throw new Error(`Cloud publishing failed: ${dbError.message}`);
+        }
+      } else if (authenticatedUserId) {
+        // Saving draft while logged in: attempt background cloud sync
+        try {
+          await supabase.from('experiences').upsert({
+            id: preparedExperience.id,
+            user_id: authenticatedUserId,
+            template_id: preparedExperience.templateId,
+            title: preparedExperience.title,
+            creator_name: preparedExperience.creatorName,
+            recipient_name: preparedExperience.recipientName,
+            slug: preparedExperience.slug,
+            config: preparedExperience.config,
+            status: preparedExperience.status,
+            published_at: preparedExperience.publishedAt
+          });
+        } catch (syncErr) {
+          console.warn('Draft background cloud sync deferred:', syncErr);
+        }
+      }
+
+      // Persist to local cache
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      let list: Experience[] = stored ? JSON.parse(stored) : [];
+
+      const existingIndex = list.findIndex((e) => e.id === preparedExperience.id);
       if (existingIndex >= 0) {
-        list[existingIndex] = { ...experience, updatedAt: new Date().toISOString() };
+        list[existingIndex] = preparedExperience;
       } else {
-        list.unshift(experience);
+        list.unshift(preparedExperience);
       }
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 
-      // Attempt Supabase save
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase.from('experiences').upsert({
-            id: experience.id,
-            user_id: session.user.id,
-            template_id: experience.templateId,
-            title: experience.title,
-            creator_name: experience.creatorName,
-            recipient_name: experience.recipientName,
-            slug: experience.slug,
-            config: experience.config,
-            status: experience.status,
-            published_at: experience.publishedAt
-          });
-        }
-      } catch (err) {
-        // Non-blocking fallback
-      }
-
-      return experience;
+      return preparedExperience;
     } catch (error) {
       console.error('Error saving experience:', error);
       throw error;
     }
   },
 
+  /**
+   * Deletes an experience locally and remotely.
+   */
   async deleteExperience(id: string): Promise<void> {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
@@ -163,7 +166,7 @@ export const experienceService = {
           await supabase.from('experiences').delete().eq('id', id).eq('user_id', session.user.id);
         }
       } catch (err) {
-        // Non-blocking fallback
+        console.warn('Remote deletion error (local deleted):', err);
       }
     } catch (error) {
       console.error('Error deleting experience:', error);
@@ -171,26 +174,32 @@ export const experienceService = {
     }
   },
 
+  /**
+   * Toggles an experience between draft and published.
+   */
   async togglePublish(id: string): Promise<Experience | null> {
     const exp = await this.getExperienceById(id);
     if (!exp) return null;
 
-    const newStatus = exp.status === 'published' ? 'draft' : 'published';
+    const willPublish = exp.status !== 'published';
     const updated: Experience = {
       ...exp,
-      status: newStatus,
-      publishedAt: newStatus === 'published' ? new Date().toISOString() : null,
+      status: willPublish ? 'published' : 'draft',
+      publishedAt: willPublish ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString()
     };
 
-    return await this.saveExperience(updated);
+    return await this.saveExperience(updated, willPublish);
   },
 
+  /**
+   * Duplicates an existing experience as a new draft.
+   */
   async duplicateExperience(id: string): Promise<Experience | null> {
     const original = await this.getExperienceById(id);
     if (!original) return null;
 
-    const newSlug = generateSlug(original.recipientName);
+    const newSlug = generateSlug(original.recipientName || 'surprise');
     const duplicated: Experience = {
       ...original,
       id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -202,6 +211,6 @@ export const experienceService = {
       updatedAt: new Date().toISOString()
     };
 
-    return await this.saveExperience(duplicated);
+    return await this.saveExperience(duplicated, false);
   }
 };

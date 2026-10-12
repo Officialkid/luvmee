@@ -1,6 +1,5 @@
 -- ==============================================================================
--- LUVMEE V1 — STARTER TEMPLATES SEED DATA
--- Populates the 6 distinct starter templates
+-- LUVMEE V1 — STARTER TEMPLATES SEED DATA (DOLLAR-QUOTED)
 -- ==============================================================================
 
 INSERT INTO public.templates (id, name, category, description, occasion, preview_color, preview_emoji, default_config, is_active)
@@ -13,7 +12,7 @@ VALUES
     'Dating, Flirting, Crushes',
     '#E85D75',
     '🥹❤️',
-    '{
+    $json${
         "creatorName": "Someone Special",
         "recipientName": "My Favorite Person",
         "title": "A Little Surprise For You",
@@ -39,7 +38,7 @@ VALUES
                 "type": "greeting",
                 "title": "Hii {recipientName}! ✨",
                 "subtitle": "I hope you have smiled today.",
-                "bodyText": "Because if you haven not, I crafted a little something just for you.",
+                "bodyText": "Because if you have not, I crafted a little something just for you.",
                 "badge": "A Special Check-in",
                 "interaction": { "type": "next_button", "primaryButtonText": "Show me! 👀" },
                 "order": 0
@@ -99,7 +98,7 @@ VALUES
                 "order": 5
             }
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 ),
 (
@@ -110,7 +109,7 @@ VALUES
     'Anniversary, Just Because, Romance',
     '#C86B85',
     '💌',
-    '{
+    $json${
         "creatorName": "Yours Truly",
         "recipientName": "Darling",
         "title": "A Love Letter For You",
@@ -164,7 +163,7 @@ VALUES
                 "order": 3
             }
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 ),
 (
@@ -175,7 +174,7 @@ VALUES
     'Crush, Confessing Feelings',
     '#E25B74',
     '🫣💖',
-    '{
+    $json${
         "creatorName": "Someone Shy",
         "recipientName": "You",
         "title": "Something I Need To Say",
@@ -229,7 +228,7 @@ VALUES
                 "order": 3
             }
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 ),
 (
@@ -240,7 +239,7 @@ VALUES
     'Anniversaries, Milestones',
     '#D97D8F',
     '🥂✨',
-    '{
+    $json${
         "creatorName": "Your Love",
         "recipientName": "My Partner",
         "title": "Happy Anniversary, Love",
@@ -294,7 +293,7 @@ VALUES
                 "order": 3
             }
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 ),
 (
@@ -305,7 +304,7 @@ VALUES
     'Birthdays',
     '#FF708A',
     '🎂🎉',
-    '{
+    $json${
         "creatorName": "With Love",
         "recipientName": "Birthday Star",
         "title": "Happy Birthday!",
@@ -359,7 +358,7 @@ VALUES
                 "order": 3
             }
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 ),
 (
@@ -370,7 +369,7 @@ VALUES
     'Appreciation, Encouragement, Gratitude',
     '#733E53',
     '🌸🤍',
-    '{
+    $json${
         "creatorName": "A Grateful Heart",
         "recipientName": "You",
         "title": "Just Wanted To Remind You",
@@ -422,7 +421,7 @@ VALUES
             "You deserve good things, beautiful moments, and reasons to smile.",
             "Consider this your reminder that you are deeply appreciated."
         ]
-    }'::jsonb,
+    }$json$::jsonb,
     TRUE
 )
 ON CONFLICT (id) DO UPDATE SET
