@@ -23,12 +23,13 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  Pencil
+  Pencil,
+  Lock
 } from 'lucide-react-native';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
-import { Experience, ExperienceStatus } from '@luvmee/shared';
+import { Experience, ExperienceStatus, buildRecipientExperienceUrl } from '@luvmee/shared';
 import { experienceService } from '../../services/experienceService';
 import { supabase } from '../../services/supabase';
 
@@ -64,8 +65,7 @@ export default function MyExperiencesScreen() {
   });
 
   const getPublicUrl = (slug: string) => {
-    const baseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
-    return `${baseUrl.replace(/\/$/, '')}/e/${slug}`;
+    return buildRecipientExperienceUrl(slug, process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL);
   };
 
   const handleShare = async (exp: Experience) => {
@@ -175,27 +175,35 @@ export default function MyExperiencesScreen() {
               <Heart size={14} color={THEME.colors.rose} />
               <Text style={styles.recipientText}>For {item.recipientName}</Text>
             </View>
-            <TouchableOpacity
-              style={[
-                styles.statusBadge,
-                isPublished ? styles.statusPublished : styles.statusDraft
-              ]}
-              onPress={() => handleTogglePublish(item)}
-            >
-              {isPublished ? (
-                <CheckCircle2 size={12} color="#166534" />
-              ) : (
-                <Clock size={12} color="#854d0e" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {item.sharingMode === 'partner_exclusive' && (
+                <View style={styles.partnerExclusiveBadge}>
+                  <Lock size={11} color={THEME.colors.rose} />
+                  <Text style={styles.partnerExclusiveText}>Partner Only</Text>
+                </View>
               )}
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.statusText,
-                  isPublished ? styles.statusTextPublished : styles.statusTextDraft
+                  styles.statusBadge,
+                  isPublished ? styles.statusPublished : styles.statusDraft
                 ]}
+                onPress={() => handleTogglePublish(item)}
               >
-                {isPublished ? 'Published' : 'Draft'}
-              </Text>
-            </TouchableOpacity>
+                {isPublished ? (
+                  <CheckCircle2 size={12} color="#166534" />
+                ) : (
+                  <Clock size={12} color="#854d0e" />
+                )}
+                <Text
+                  style={[
+                    styles.statusText,
+                    isPublished ? styles.statusTextPublished : styles.statusTextDraft
+                  ]}
+                >
+                  {isPublished ? 'Published' : 'Draft'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Experience Title */}
@@ -468,6 +476,22 @@ const styles = StyleSheet.create({
   },
   statusTextDraft: {
     color: '#854d0e'
+  },
+  partnerExclusiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(232, 93, 117, 0.1)',
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 93, 117, 0.2)'
+  },
+  partnerExclusiveText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: THEME.colors.rose
   },
   experienceTitle: {
     fontSize: 18,

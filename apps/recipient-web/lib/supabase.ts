@@ -34,6 +34,8 @@ export async function getPublishedExperienceBySlug(slug: string): Promise<Experi
         slug: data.slug,
         config: data.config,
         status: data.status,
+        sharingMode: data.sharing_mode || 'public_link',
+        recipientId: data.recipient_id || null,
         publishedAt: data.published_at,
         createdAt: data.created_at,
         updatedAt: data.updated_at
@@ -41,23 +43,36 @@ export async function getPublishedExperienceBySlug(slug: string): Promise<Experi
     }
   }
 
-  // Fallback demo experience for landing page demo preview
-  if (slug === 'demo') {
-    const defaultTemplate = getTemplateById('playful-yes-no')!;
-    return {
-      id: '00000000-0000-0000-0000-000000000001',
-      userId: '00000000-0000-0000-0000-000000000002',
-      templateId: 'playful-yes-no',
-      title: 'A Little Surprise For You',
-      creatorName: 'Someone Special',
-      recipientName: 'My Favorite Person',
-      slug: 'demo',
-      config: defaultTemplate.defaultConfig,
-      status: 'published',
-      publishedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  // If experience is not returned by normal SELECT (e.g. anonymous visitor on partner_exclusive),
+  // check public access state RPC to determine if this is a private surprise
+  if (supabase) {
+    try {
+      const { data: accessState } = await supabase.rpc('get_experience_access_state', {
+        p_slug: slug
+      });
+
+      if (accessState?.exists && accessState?.sharingMode === 'partner_exclusive') {
+        const defaultTemplate = getTemplateById('playful-yes-no')!;
+        return {
+          id: '00000000-0000-0000-0000-000000000000',
+          userId: '00000000-0000-0000-0000-000000000000',
+          templateId: 'playful-yes-no',
+          title: 'Private Partner Surprise',
+          creatorName: 'A Connected Partner',
+          recipientName: accessState.recipientName || 'Partner',
+          slug: slug,
+          config: defaultTemplate.defaultConfig,
+          status: 'published',
+          sharingMode: 'partner_exclusive',
+          recipientId: null,
+          publishedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+    } catch {
+      // Fall through to null
+    }
   }
 
   return null;

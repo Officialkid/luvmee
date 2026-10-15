@@ -9,7 +9,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Sparkles, Eye, Send, Check, BookmarkCheck, ArrowLeft } from 'lucide-react-native';
+import { Sparkles, Eye, Send, Check, BookmarkCheck, ArrowLeft, Lock, Globe, Heart } from 'lucide-react-native';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -21,10 +21,14 @@ import {
   MIDNIGHT_STARS_THEME,
   generateSlug,
   ExperienceConfigSchema,
-  Experience
+  Experience,
+  SharingMode,
+  PartnerState,
+  buildRecipientExperienceUrl
 } from '@luvmee/shared';
 import { experienceService } from '../../services/experienceService';
 import { partnerService } from '../../services/partnerService';
+import { authService } from '../../services/authService';
 import { supabase } from '../../services/supabase';
 
 const THEMES = [DEFAULT_ROMANTIC_THEME, GOLDEN_SUNSET_THEME, MIDNIGHT_STARS_THEME];
@@ -46,6 +50,9 @@ export default function EditorScreen() {
   const [title, setTitle] = useState(starterTemplate.defaultConfig.title);
   const [selectedTheme, setSelectedTheme] = useState(starterTemplate.defaultConfig.theme);
   const [musicEnabled, setMusicEnabled] = useState(starterTemplate.defaultConfig.music.enabled);
+  const [sharingMode, setSharingMode] = useState<SharingMode>('public_link');
+  const [recipientId, setRecipientId] = useState<string | null>(null);
+  const [partnerState, setPartnerState] = useState<PartnerState>({ state: 'not_connected' });
 
   // Editable scene texts
   const [headline, setHeadline] = useState(starterTemplate.defaultConfig.scenes[0]?.title || 'Hii {recipientName}! ✨');
@@ -69,9 +76,11 @@ export default function EditorScreen() {
           setCreatorName((prev) => prev || userDisplayName);
         }
 
-        const partnerState = await partnerService.getPartnerState();
-        if (partnerState.state === 'connected' && partnerState.partnerName && !paramExpId) {
-          setRecipientName((prev) => prev || partnerState.partnerName || '');
+        const pState = await partnerService.getPartnerState();
+        setPartnerState(pState);
+        if (pState.state === 'connected' && pState.partnerName && !paramExpId) {
+          setRecipientName((prev) => prev || pState.partnerName || '');
+          setRecipientId(pState.partnerId || null);
         }
       } catch {
         // Fallback
@@ -90,6 +99,8 @@ export default function EditorScreen() {
             setCreatorName(existing.creatorName || '');
             setRecipientName(existing.recipientName || '');
             setTitle(existing.title || '');
+            setSharingMode(existing.sharingMode || 'public_link');
+            setRecipientId(existing.recipientId || null);
             setSelectedTheme(existing.config.theme || DEFAULT_ROMANTIC_THEME);
             setMusicEnabled(!!existing.config.music?.enabled);
 
@@ -164,6 +175,8 @@ export default function EditorScreen() {
       const slug = existingSlug || generateSlug(recipientName.trim() || 'surprise');
       const now = new Date().toISOString();
 
+      const targetRecipientId = sharingMode === 'partner_exclusive' ? (recipientId || partnerState.partnerId || null) : null;
+
       const draftExperience: Experience = {
         id: expId,
         userId: 'local-guest', // Will be overridden dynamically in experienceService if authenticated
@@ -174,6 +187,8 @@ export default function EditorScreen() {
         slug,
         config: newConfig,
         status: 'draft',
+        sharingMode,
+        recipientId: targetRecipientId,
         publishedAt: null,
         createdAt: now,
         updatedAt: now
@@ -218,9 +233,22 @@ export default function EditorScreen() {
           },
           {
             text: 'Sign In / Register',
-            onPress: () => router.push('/(auth)/sign-in')
+            onPress: async () => {
+              const currentId = existingExperienceId || activeTemplateId;
+              await authService.setAuthRedirect(`/editor/${currentId}`);
+              router.push('/(auth)/sign-in');
+            }
           }
         ]
+      );
+      return;
+    }
+
+    const targetRecipientId = sharingMode === 'partner_exclusive' ? (recipientId || partnerState.partnerId || null) : null;
+    if (sharingMode === 'partner_exclusive' && !targetRecipientId) {
+      Alert.alert(
+        'Partner Connection Required 🔒',
+        'Partner-exclusive surprises require an active connected partner. Please connect with your partner in Profile, or switch to Public Link sharing.'
       );
       return;
     }
@@ -247,6 +275,8 @@ export default function EditorScreen() {
       slug,
       config: newConfig,
       status: 'published',
+      sharingMode,
+      recipientId: targetRecipientId,
       publishedAt: now,
       createdAt: now,
       updatedAt: now
@@ -259,8 +289,7 @@ export default function EditorScreen() {
       setExistingSlug(slug);
       setIsPublishing(false);
 
-      const baseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
-      const publicUrl = `${baseUrl.replace(/\/$/, '')}/e/${slug}`;
+      const publicUrl = buildRecipientExperienceUrl(slug, process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL);
 
       Alert.alert(
         'Surprise Published! 💖',
@@ -323,6 +352,63 @@ export default function EditorScreen() {
           onChangeText={setTitle}
           placeholder="e.g. A Special Surprise For You"
         />
+
+        {/* Sharing Mode & Privacy Selector */}
+        <Text style={styles.sharingSectionTitle}>Audience & Privacy</Text>
+        <View style={styles.sharingModeContainer}>
+          <TouchableOpacity
+            style={[
+              styles.sharingOption,
+              sharingMode === 'public_link' && styles.sharingOptionActive
+            ]}
+            onPress={() => setSharingMode('public_link')}
+          >
+            <View style={styles.sharingOptionHeader}>
+              <Globe size={16} color={sharingMode === 'public_link' ? THEME.colors.rose : THEME.colors.burgundySoft} />
+              <Text style={[styles.sharingOptionTitle, sharingMode === 'public_link' && styles.sharingOptionTitleActive]}>
+                Public Link
+              </Text>
+            </View>
+            <Text style={styles.sharingOptionDesc}>
+              Anyone with the link can open and experience on web.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.sharingOption,
+              sharingMode === 'partner_exclusive' && styles.sharingOptionActive
+            ]}
+            onPress={() => {
+              if (partnerState.state !== 'connected') {
+                Alert.alert(
+                  'Partner Connection Needed 🔒',
+                  'To create a private partner-exclusive surprise, connect with your partner first in the Profile tab.'
+                );
+                return;
+              }
+              setSharingMode('partner_exclusive');
+              if (partnerState.partnerName && !recipientName.trim()) {
+                setRecipientName(partnerState.partnerName);
+              }
+              if (partnerState.partnerId) {
+                setRecipientId(partnerState.partnerId);
+              }
+            }}
+          >
+            <View style={styles.sharingOptionHeader}>
+              <Lock size={16} color={sharingMode === 'partner_exclusive' ? THEME.colors.rose : THEME.colors.burgundySoft} />
+              <Text style={[styles.sharingOptionTitle, sharingMode === 'partner_exclusive' && styles.sharingOptionTitleActive]}>
+                Partner Exclusive 🔒
+              </Text>
+            </View>
+            <Text style={styles.sharingOptionDesc}>
+              {partnerState.state === 'connected'
+                ? `Private for ${partnerState.partnerName || 'your partner'}. Protected in app.`
+                : 'Connect with partner to unlock private surprises.'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Card>
 
       {/* Step 2: Content Customization */}
@@ -539,5 +625,49 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 12
+  },
+  sharingSectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: THEME.colors.burgundySoft,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 14,
+    marginBottom: 8
+  },
+  sharingModeContainer: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  sharingOption: {
+    flex: 1,
+    padding: 12,
+    borderRadius: THEME.radius.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(84, 38, 56, 0.1)',
+    backgroundColor: '#FFFFFF'
+  },
+  sharingOptionActive: {
+    borderColor: THEME.colors.rose,
+    backgroundColor: 'rgba(232, 93, 117, 0.05)'
+  },
+  sharingOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4
+  },
+  sharingOptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.colors.burgundy
+  },
+  sharingOptionTitleActive: {
+    color: THEME.colors.rose
+  },
+  sharingOptionDesc: {
+    fontSize: 11,
+    color: THEME.colors.burgundySoft,
+    lineHeight: 15
   }
 });

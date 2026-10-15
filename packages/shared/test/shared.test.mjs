@@ -8,7 +8,8 @@ import {
   formatExperienceDate,
   STARTER_TEMPLATES,
   getTemplateById,
-  ExperienceConfigSchema
+  ExperienceConfigSchema,
+  buildRecipientExperienceUrl
 } from '../dist/index.js';
 
 test('generateSlug generates valid URL-friendly slugs', () => {
@@ -30,12 +31,16 @@ test('interpolatePlaceholders replaces {recipientName} and {creatorName}', () =>
   assert.strictEqual(result, 'Hii Alikah, this is from Daniel ❤️');
 });
 
-test('Starter templates catalogue contains 6 complete templates', () => {
-  assert.strictEqual(STARTER_TEMPLATES.length, 6);
+test('Starter templates catalogue contains complete templates including greeting cards', () => {
+  assert.ok(STARTER_TEMPLATES.length >= 8);
   const playful = getTemplateById('playful-yes-no');
   assert.ok(playful);
   assert.strictEqual(playful.name, 'The Playful Yes-or-No');
   assert.ok(playful.defaultConfig.scenes.length >= 4);
+
+  const bdayCard = getTemplateById('birthday-celebration-card');
+  assert.ok(bdayCard);
+  assert.strictEqual(bdayCard.name, 'Birthday Celebration Card');
 });
 
 test('All starter templates conform to ExperienceConfigSchema', () => {
@@ -63,5 +68,19 @@ test('generateSlug handles empty, special characters, and numeric inputs safely'
 
   const slugNormal = generateSlug('Alex');
   assert.match(slugNormal, /^for-alex-[a-z0-9]+$/);
+});
+
+test('buildRecipientExperienceUrl creates clean, valid URLs and handles malformed base or empty slug', () => {
+  const urlDefault = buildRecipientExperienceUrl('my-anniversary-card');
+  assert.strictEqual(urlDefault, 'https://luvmee.vercel.app/e/my-anniversary-card');
+
+  const urlTrailing = buildRecipientExperienceUrl('my-anniversary-card', 'https://luvmee.app///');
+  assert.strictEqual(urlTrailing, 'https://luvmee.app/e/my-anniversary-card');
+
+  const urlNoProto = buildRecipientExperienceUrl('my-card', 'luvmee.staging.dev');
+  assert.strictEqual(urlNoProto, 'https://luvmee.staging.dev/e/my-card');
+
+  assert.throws(() => buildRecipientExperienceUrl(''), /Slug is required/);
+  assert.throws(() => buildRecipientExperienceUrl('   '), /Slug is required/);
 });
 

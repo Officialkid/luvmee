@@ -91,3 +91,85 @@ export function calculateDaysInLove(connectedAt: string | Date | null | undefine
     return 0;
   }
 }
+
+/**
+ * Normalizes username input to lowercase and trims surrounding whitespace.
+ */
+export function normalizeUsername(input: string): string {
+  if (!input) return '';
+  return input.toLowerCase().trim();
+}
+
+/**
+ * Generates a clean, unique-friendly fallback username from user metadata (e.g., Google full name or email prefix).
+ * Never exposes full email domains or sensitive characters.
+ */
+export function generateUsernameFromMetadata(metadata: { name?: string | null; fullName?: string | null; email?: string | null }): string {
+  let base = '';
+  if (metadata.fullName || metadata.name) {
+    base = (metadata.fullName || metadata.name || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  if (!base && metadata.email) {
+    const emailPrefix = metadata.email.split('@')[0] || '';
+    base = emailPrefix
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  if (!base || base.length < 3) {
+    base = 'user';
+  }
+
+  // Ensure maximum length leaving room for 4 random digits
+  if (base.length > 20) {
+    base = base.substring(0, 20);
+  }
+
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  return `${base}_${randomSuffix}`;
+}
+
+/**
+ * Evaluates whether an authenticated session has been inactive for more than two months (60 days).
+ */
+export function isSessionInactiveTwoMonths(lastActiveAt: string | number | Date | null | undefined, nowMs: number = Date.now()): boolean {
+  if (!lastActiveAt) return false;
+  try {
+    const lastActiveTime = new Date(lastActiveAt).getTime();
+    if (isNaN(lastActiveTime)) return false;
+    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+    return (nowMs - lastActiveTime) > SIXTY_DAYS_MS;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safely constructs a public recipient experience URL.
+ * Enforces protocol, trims trailing slashes, and ensures non-empty slug.
+ */
+export function buildRecipientExperienceUrl(slug: string, baseUrl?: string): string {
+  const cleanSlug = (slug || '').trim();
+  if (!cleanSlug) {
+    throw new Error('Slug is required to generate a recipient experience URL.');
+  }
+
+  let base = (baseUrl || '').trim() || 'https://luvmee.vercel.app';
+  if (!base.startsWith('http://') && !base.startsWith('https://')) {
+    base = `https://${base}`;
+  }
+  base = base.replace(/\/+$/, '');
+
+  return `${base}/e/${encodeURIComponent(cleanSlug)}`;
+}
+
+export * from './calendar.js';
+
+

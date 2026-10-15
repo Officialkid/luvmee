@@ -2,27 +2,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { Experience, generateSlug } from '@luvmee/shared';
 
-const STORAGE_KEY = '@luvmee_experiences_v1';
+const EXPERIENCES_STORAGE_PREFIX = '@luvmee_experiences_v1';
 
 export const experienceService = {
+  /**
+   * Clears cached experiences for a given user or local guest.
+   */
+  async clearCache(userId?: string | null): Promise<void> {
+    try {
+      if (userId) {
+        await AsyncStorage.removeItem(`${EXPERIENCES_STORAGE_PREFIX}_${userId}`);
+      }
+      await AsyncStorage.removeItem(`${EXPERIENCES_STORAGE_PREFIX}_local`);
+      await AsyncStorage.removeItem(EXPERIENCES_STORAGE_PREFIX);
+    } catch (e) {
+      console.warn('Error clearing experiences cache:', e);
+    }
+  },
+
   /**
    * Retrieves all experiences belonging to the active user (or local guest drafts).
    * Synchronizes with Supabase cloud when authenticated.
    */
   async getExperiences(): Promise<Experience[]> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      const cacheKey = userId ? `${EXPERIENCES_STORAGE_PREFIX}_${userId}` : `${EXPERIENCES_STORAGE_PREFIX}_local`;
+
       // 1. Read local storage cache
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const stored = await AsyncStorage.getItem(cacheKey);
       let localList: Experience[] = stored ? JSON.parse(stored) : [];
 
       // 2. If authenticated with Supabase, query cloud experiences
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        if (userId) {
           const { data, error } = await supabase
             .from('experiences')
             .select('*')
-            .eq('user_id', session.user.id)
+            .eq('user_id', userId)
             .order('updated_at', { ascending: false });
 
           if (!error && data) {
@@ -37,13 +55,15 @@ export const experienceService = {
               slug: item.slug,
               config: item.config,
               status: item.status,
+              sharingMode: item.sharing_mode || 'public_link',
+              recipientId: item.recipient_id || null,
               publishedAt: item.published_at,
               createdAt: item.created_at,
               updatedAt: item.updated_at
             }));
 
             // Sync remote list back into local cache
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remoteList));
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(remoteList));
             return remoteList;
           }
         }
@@ -81,6 +101,8 @@ export const experienceService = {
       const preparedExperience: Experience = {
         ...experience,
         userId: authenticatedUserId || experience.userId || 'local-guest',
+        sharingMode: experience.sharingMode || 'public_link',
+        recipientId: experience.recipientId || null,
         updatedAt: new Date().toISOString()
       };
 
@@ -101,6 +123,8 @@ export const experienceService = {
           slug: preparedExperience.slug,
           config: preparedExperience.config,
           status: preparedExperience.status,
+          sharing_mode: preparedExperience.sharingMode,
+          recipient_id: preparedExperience.recipientId,
           published_at: preparedExperience.publishedAt
         });
 
@@ -121,6 +145,8 @@ export const experienceService = {
             slug: preparedExperience.slug,
             config: preparedExperience.config,
             status: preparedExperience.status,
+            sharing_mode: preparedExperience.sharingMode,
+            recipient_id: preparedExperience.recipientId,
             published_at: preparedExperience.publishedAt
           });
         } catch (syncErr) {
@@ -128,8 +154,12 @@ export const experienceService = {
         }
       }
 
-      // Persist to local cache
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      // Persist to user-scoped local cache
+      const cacheKey = authenticatedUserId
+        ? `${EXPERIENCES_STORAGE_PREFIX}_${authenticatedUserId}`
+        : `${EXPERIENCES_STORAGE_PREFIX}_local`;
+
+      const stored = await AsyncStorage.getItem(cacheKey);
       let list: Experience[] = stored ? JSON.parse(stored) : [];
 
       const existingIndex = list.findIndex((e) => e.id === preparedExperience.id);
@@ -139,7 +169,7 @@ export const experienceService = {
         list.unshift(preparedExperience);
       }
 
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(list));
 
       return preparedExperience;
     } catch (error) {
@@ -153,17 +183,22 @@ export const experienceService = {
    */
   async deleteExperience(id: string): Promise<void> {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      const cacheKey = userId
+        ? `${EXPERIENCES_STORAGE_PREFIX}_${userId}`
+        : `${EXPERIENCES_STORAGE_PREFIX}_local`;
+
+      const stored = await AsyncStorage.getItem(cacheKey);
       if (stored) {
         const list: Experience[] = JSON.parse(stored);
         const filtered = list.filter((e) => e.id !== id);
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(filtered));
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase.from('experiences').delete().eq('id', id).eq('user_id', session.user.id);
+        if (userId) {
+          await supabase.from('experiences').delete().eq('id', id).eq('user_id', userId);
         }
       } catch (err) {
         console.warn('Remote deletion error (local deleted):', err);
@@ -206,6 +241,8 @@ export const experienceService = {
       title: `${original.title} (Copy)`,
       slug: newSlug,
       status: 'draft',
+      sharingMode: original.sharingMode || 'public_link',
+      recipientId: original.recipientId || null,
       publishedAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

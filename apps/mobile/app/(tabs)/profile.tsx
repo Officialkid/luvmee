@@ -19,27 +19,39 @@ import {
   LogIn,
   RotateCcw,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  PenSquare,
+  Trash2,
+  Bookmark
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { Avatar, Badge, SectionHeader } from '../../components/UIPrimitives';
 import { supabase } from '../../services/supabase';
 import { experienceService } from '../../services/experienceService';
 import { partnerService } from '../../services/partnerService';
+import { notificationService } from '../../services/notificationService';
+import { loveNotesService } from '../../services/loveNotesService';
+import { authService } from '../../services/authService';
 import { PartnerState } from '@luvmee/shared';
 import { PartnerConnectModal } from '../../components/PartnerConnectModal';
+import { EditUsernameModal } from '../../components/EditUsernameModal';
+import { DeleteAccountModal } from '../../components/DeleteAccountModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userHandle, setUserHandle] = useState<string | null>(null);
   const [partnerState, setPartnerState] = useState<PartnerState>({
     state: 'not_connected',
     myPartnerCode: null
   });
   const [connectModalVisible, setConnectModalVisible] = useState(false);
+  const [editUsernameVisible, setEditUsernameVisible] = useState(false);
+  const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
   const [stats, setStats] = useState({ total: 0, published: 0 });
 
   useEffect(() => {
@@ -58,18 +70,31 @@ export default function ProfileScreen() {
 
   const checkUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await authService.getValidSession();
       if (session?.user) {
         setUserEmail(session.user.email || null);
         const metaName = session.user.user_metadata?.display_name || session.user.email?.split('@')[0];
         setUserName(metaName || 'Romantic Creator');
+
+        // Fetch application profile including username
+        const profile = await authService.getProfile();
+        if (profile?.username) {
+          setUserHandle(profile.username);
+        } else {
+          setUserHandle(null);
+        }
+
+        // Register device push token in background
+        notificationService.registerDeviceForPush().catch(() => {});
       } else {
         setUserEmail(null);
         setUserName(null);
+        setUserHandle(null);
       }
     } catch {
       setUserEmail(null);
       setUserName(null);
+      setUserHandle(null);
     }
   };
 
@@ -99,11 +124,15 @@ export default function ProfileScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await supabase.auth.signOut();
+          const { data } = await supabase.auth.getSession();
+          const uid = data?.session?.user?.id;
+          await loveNotesService.clearCache(uid);
+          await AsyncStorage.removeItem('@luvmee_partner_messages_v1');
+          await authService.signOut();
           setUserEmail(null);
           setUserName(null);
           await loadPartner();
-          Alert.alert('Signed Out', 'You are now in local guest mode.');
+          Alert.alert('Signed Out', 'You are now exploring as a guest.');
         }
       }
     ]);
@@ -130,21 +159,31 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerSubtitle}>ACCOUNT & SETTINGS</Text>
-          <Text style={styles.headerTitle}>Profile 👤</Text>
+          <Text style={styles.headerTitle}>Profile & Preferences</Text>
         </View>
 
         {/* User Card */}
-        <Card style={styles.userCard}>
-          <View style={styles.avatarCircle}>
-            <Text style={{ fontSize: 32 }}>🤵🏽</Text>
-          </View>
+        <Card variant="surface" style={styles.userCard}>
+          <Avatar name={userName || 'User'} size="lg" style={{ marginBottom: 10 }} />
           <Text style={styles.userName}>
             {userName || 'Guest Creator'}
           </Text>
+
+          {userHandle ? (
+            <TouchableOpacity
+              style={styles.handleBadge}
+              onPress={() => setEditUsernameVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.handleText}>@{userHandle}</Text>
+              <PenSquare size={12} color={THEME.colors.primary} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          ) : null}
+
           <Text style={styles.userEmail}>
             {userEmail ? userEmail : 'Guest Mode • Sign in to sync across devices'}
           </Text>
@@ -158,7 +197,7 @@ export default function ProfileScreen() {
               <Text style={styles.partnerCodeBannerLabel}>YOUR PARTNER CODE:</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.partnerCodeBannerCode}>{partnerState.myPartnerCode}</Text>
-                <Share2 size={13} color={THEME.colors.rose} />
+                <Share2 size={13} color={THEME.colors.primary} />
               </View>
             </TouchableOpacity>
           ) : null}
@@ -166,12 +205,12 @@ export default function ProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{stats.total}</Text>
-              <Text style={styles.statLabel}>Surprises Created</Text>
+              <Text style={styles.statLabel}>Created</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{stats.published}</Text>
-              <Text style={styles.statLabel}>Published & Sent</Text>
+              <Text style={styles.statLabel}>Published</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
@@ -186,22 +225,18 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Partner Connection Card */}
-        <Text style={styles.sectionHeading}>Connected Partner</Text>
-        <Card style={styles.userCard}>
+        <SectionHeader title="Connected Partner" />
+        <Card variant="surface" style={styles.userCard}>
           {partnerState.state === 'connected' ? (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: 14 }}>
-                <View style={[styles.avatarCircle, { width: 52, height: 52, borderRadius: 26, marginBottom: 0 }]}>
-                  <Text style={{ fontSize: 26 }}>👸🏽</Text>
-                </View>
+                <Avatar name={partnerState.partnerName || 'Partner'} size="md" showOnlineDot />
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.userName}>{partnerState.partnerName || 'Partner'}</Text>
-                    <View style={{ backgroundColor: 'rgba(232, 93, 117, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.colors.rose }}>Partner</Text>
-                    </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={styles.partnerNameHeading}>{partnerState.partnerName || 'Partner'}</Text>
+                    <Badge label="Partner" variant="primary" />
                   </View>
-                  <Text style={styles.userEmail}>Connected Partner • Love Notes Enabled</Text>
+                  <Text style={styles.partnerSubtext}>Connected Partner • Love Notes Enabled</Text>
                 </View>
               </View>
               <View style={{ width: '100%', gap: 10 }}>
@@ -209,49 +244,49 @@ export default function ProfileScreen() {
                   title="Open Love Notes & Sparks"
                   onPress={() => router.push('/(tabs)/messages')}
                 />
-                <TouchableOpacity
-                  style={styles.managePartnerBtn}
+                <Button
+                  title="Manage Connection / Disconnect"
+                  variant="outline"
                   onPress={() => setConnectModalVisible(true)}
-                >
-                  <Text style={styles.managePartnerText}>Manage Connection / Disconnect</Text>
-                </TouchableOpacity>
+                />
               </View>
             </>
           ) : partnerState.state === 'incoming_pending' ? (
-            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>💌</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 12, width: '100%' }}>
+              <Text style={{ fontSize: 28, marginBottom: 8 }}>💌</Text>
               <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
                 Incoming Request: {partnerState.partnerName || 'Partner'}
               </Text>
-              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 14 }]}>
                 Wants to connect as your partner on LUVMEE.
               </Text>
               <Button
-                title="Review & Accept 💕"
+                title="Review & Accept Connection"
                 onPress={() => setConnectModalVisible(true)}
               />
             </View>
           ) : partnerState.state === 'outgoing_pending' ? (
-            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>⏳</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 12, width: '100%' }}>
+              <Text style={{ fontSize: 28, marginBottom: 8 }}>⏳</Text>
               <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
                 Invite Sent to {partnerState.partnerName || 'Partner'}
               </Text>
-              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 14 }]}>
                 Waiting for your partner to accept your connection request.
               </Text>
               <Button
                 title="View Status / Cancel"
+                variant="outline"
                 onPress={() => setConnectModalVisible(true)}
               />
             </View>
           ) : (
-            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>💌</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 12, width: '100%' }}>
+              <Text style={{ fontSize: 28, marginBottom: 8 }}>💌</Text>
               <Text style={[styles.userName, { textAlign: 'center', marginBottom: 4 }]}>
                 No Partner Connected Yet
               </Text>
-              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 16 }]}>
+              <Text style={[styles.userEmail, { textAlign: 'center', marginBottom: 14 }]}>
                 Invite your partner to connect, exchange daily love sparks, and see relationship milestones together.
               </Text>
               <Button
@@ -264,69 +299,108 @@ export default function ProfileScreen() {
 
         {/* Auth CTA if guest */}
         {!userEmail ? (
-          <Card style={styles.authCtaCard}>
+          <Card variant="highlight" style={styles.authCtaCard}>
             <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-              <Sparkles size={24} color={THEME.colors.rose} />
+              <Sparkles size={22} color={THEME.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.ctaTitle}>Sync With Supabase Cloud</Text>
+                <Text style={styles.ctaTitle}>Sign In with Email</Text>
                 <Text style={styles.ctaBody}>
-                  Sign in or create an account to back up your romantic surprises across devices.
+                  Sign in with an email code to securely sync your surprises, celebration calendar, and love notes.
                 </Text>
               </View>
             </View>
-            <View style={{ marginTop: 14 }}>
+            <View style={{ marginTop: 12 }}>
               <Button
-                title="Sign In / Register"
-                onPress={() => router.push('/(auth)/sign-in')}
+                title="Sign In with Email"
+                onPress={async () => {
+                  await authService.setAuthRedirect('/(tabs)/profile');
+                  router.push('/(auth)/sign-in');
+                }}
               />
             </View>
           </Card>
         ) : null}
 
-        {/* Section: Product Highlights */}
-        <Text style={styles.sectionHeading}>Product Principles</Text>
-        <Card style={styles.infoCard}>
+        {/* Section: Product Principles */}
+        <SectionHeader title="Product Principles" />
+        <Card variant="surface" style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <ShieldCheck size={20} color={THEME.colors.rose} />
+            <ShieldCheck size={18} color={THEME.colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>No App Install For Recipients</Text>
+              <Text style={styles.infoTitle}>No App Required for Recipients</Text>
               <Text style={styles.infoDesc}>
-                Recipients open your published surprise directly on any browser with zero login required.
+                Recipients open your published surprises in any mobile or desktop browser with zero signup.
               </Text>
             </View>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
-            <Heart size={20} color={THEME.colors.rose} />
+            <Heart size={18} color={THEME.colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.infoTitle}>Curated Romantic Themes</Text>
               <Text style={styles.infoDesc}>
-                6 handcrafted templates with escaping NO buttons, gentle audio, and confetti celebrations.
+                Interactive templates with escaping buttons, hidden letters, and celebration confetti.
               </Text>
             </View>
           </View>
         </Card>
 
-        {/* Section: Data & Utilities */}
-        <Text style={styles.sectionHeading}>Preferences & Actions</Text>
-        <Card style={styles.actionsCard}>
-          <TouchableOpacity style={styles.actionItem} onPress={handleResetData}>
-            <View style={styles.actionIcon}>
-              <RotateCcw size={18} color={THEME.colors.burgundy} />
+        {/* Section: Preferences & Actions */}
+        <SectionHeader title="Preferences & Account" />
+        <Card variant="surface" style={styles.actionsCard}>
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(tabs)/plans')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: THEME.colors.surfaceHighlight }]}>
+              <Bookmark size={16} color={THEME.colors.primary} />
             </View>
-            <Text style={styles.actionLabel}>Reset Demo Surprises</Text>
-            <ChevronRight size={18} color={THEME.colors.muted} />
+            <Text style={styles.actionLabel}>Personal Plans & Wishlist</Text>
+            <ChevronRight size={16} color={THEME.colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionItem} onPress={handleResetData} activeOpacity={0.7}>
+            <View style={styles.actionIcon}>
+              <RotateCcw size={16} color={THEME.colors.textHeading} />
+            </View>
+            <Text style={styles.actionLabel}>Reset Local Cache</Text>
+            <ChevronRight size={16} color={THEME.colors.textMuted} />
           </TouchableOpacity>
 
           {userEmail && (
             <>
               <View style={styles.divider} />
-              <TouchableOpacity style={styles.actionItem} onPress={handleSignOut}>
-                <View style={[styles.actionIcon, { backgroundColor: '#FEE2E2' }]}>
-                  <LogOut size={18} color="#DC2626" />
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => setEditUsernameVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: THEME.colors.surfaceHighlight }]}>
+                  <PenSquare size={16} color={THEME.colors.primary} />
                 </View>
-                <Text style={[styles.actionLabel, { color: '#DC2626' }]}>Sign Out</Text>
-                <ChevronRight size={18} color={THEME.colors.muted} />
+                <Text style={styles.actionLabel}>Edit Username</Text>
+                <ChevronRight size={16} color={THEME.colors.textMuted} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity style={styles.actionItem} onPress={handleSignOut} activeOpacity={0.7}>
+                <View style={[styles.actionIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <LogOut size={16} color={THEME.colors.danger} />
+                </View>
+                <Text style={[styles.actionLabel, { color: THEME.colors.danger }]}>Sign Out</Text>
+                <ChevronRight size={16} color={THEME.colors.textMuted} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => setDeleteAccountVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Trash2 size={16} color={THEME.colors.danger} />
+                </View>
+                <Text style={[styles.actionLabel, { color: THEME.colors.danger }]}>Permanently Delete Account</Text>
+                <ChevronRight size={16} color={THEME.colors.textMuted} />
               </TouchableOpacity>
             </>
           )}
@@ -334,8 +408,8 @@ export default function ProfileScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerApp}>LUVMEE V1.0.0</Text>
-          <Text style={styles.footerNote}>Crafted with ❤️ for romantic creators worldwide</Text>
+          <Text style={styles.footerApp}>LUVMEE V1.0</Text>
+          <Text style={styles.footerNote}>Remember who matters • Celebrate what counts</Text>
         </View>
       </ScrollView>
 
@@ -345,6 +419,30 @@ export default function ProfileScreen() {
         partnerState={partnerState}
         onStateChange={loadPartner}
       />
+
+      <EditUsernameModal
+        visible={editUsernameVisible}
+        currentUsername={userHandle || ''}
+        onClose={() => setEditUsernameVisible(false)}
+        onUsernameUpdated={(newHandle) => {
+          setUserHandle(newHandle);
+          Alert.alert('Username Updated', `@${newHandle} is now your active username.`);
+        }}
+      />
+
+      <DeleteAccountModal
+        visible={deleteAccountVisible}
+        onClose={() => setDeleteAccountVisible(false)}
+        onDeleted={async () => {
+          setDeleteAccountVisible(false);
+          setUserEmail(null);
+          setUserName(null);
+          setUserHandle(null);
+          await loadPartner();
+          Alert.alert('Account Deleted', 'Your LUVMEE account and data have been permanently removed.');
+          router.replace('/(tabs)');
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -352,113 +450,119 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: THEME.colors.blush
+    backgroundColor: THEME.colors.background
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40
+    padding: THEME.spacing.md,
+    paddingBottom: THEME.spacing.xxl
   },
   header: {
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 16
   },
   headerSubtitle: {
     fontSize: 11,
-    fontWeight: '800',
-    color: THEME.colors.rose,
+    fontWeight: '700',
+    color: THEME.colors.textMuted,
     letterSpacing: 1.2
   },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: THEME.colors.burgundy,
+    fontSize: 22,
+    fontWeight: '700',
+    color: THEME.colors.textHeading,
+    letterSpacing: -0.3,
     marginTop: 2
   },
   userCard: {
     alignItems: 'center',
-    paddingVertical: 24,
-    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: THEME.radius.lg,
     marginBottom: 16
   },
-  avatarCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#FCE7ED',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12
-  },
   userName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: THEME.colors.burgundy,
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.colors.textHeading,
     marginBottom: 2
   },
+  partnerNameHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.colors.textHeading
+  },
+  partnerSubtext: {
+    fontSize: 12,
+    color: THEME.colors.textMuted,
+    marginTop: 2
+  },
+  handleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.colors.surfaceHighlight,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: THEME.radius.full,
+    marginBottom: 6
+  },
+  handleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.colors.primary
+  },
   userEmail: {
-    fontSize: 13,
-    color: THEME.colors.muted,
-    marginBottom: 18
+    fontSize: 12,
+    color: THEME.colors.textMuted,
+    marginBottom: 16
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    paddingTop: 16,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(232, 93, 117, 0.1)'
+    borderTopColor: THEME.colors.border
   },
   statBox: {
     flex: 1,
     alignItems: 'center'
   },
   statNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: THEME.colors.rose
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.colors.primary
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: THEME.colors.muted,
+    color: THEME.colors.textMuted,
     marginTop: 2
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(232, 93, 117, 0.15)'
+    height: 24,
+    backgroundColor: THEME.colors.border
   },
   authCtaCard: {
-    backgroundColor: '#FFF9F2',
-    borderWidth: 1.5,
-    borderColor: 'rgba(232, 93, 117, 0.25)',
-    marginBottom: 20,
-    borderRadius: 16
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: THEME.radius.lg
   },
   ctaTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    color: THEME.colors.burgundy
+    color: THEME.colors.textHeading
   },
   ctaBody: {
     fontSize: 12,
-    color: THEME.colors.muted,
+    color: THEME.colors.textMuted,
     marginTop: 2,
-    lineHeight: 18
-  },
-  sectionHeading: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: THEME.colors.burgundy,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-    marginLeft: 4
+    lineHeight: 16
   },
   infoCard: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 20
+    padding: 14,
+    borderRadius: THEME.radius.md,
+    marginBottom: 16
   },
   infoRow: {
     flexDirection: 'row',
@@ -466,25 +570,25 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start'
   },
   infoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: THEME.colors.burgundy
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.colors.textHeading
   },
   infoDesc: {
     fontSize: 12,
-    color: THEME.colors.muted,
-    lineHeight: 17,
+    color: THEME.colors.textMuted,
+    lineHeight: 16,
     marginTop: 2
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(232, 93, 117, 0.1)',
-    marginVertical: 12
+    backgroundColor: THEME.colors.border,
+    marginVertical: 10
   },
   actionsCard: {
-    padding: 8,
-    borderRadius: 16,
-    marginBottom: 24
+    padding: 6,
+    borderRadius: THEME.radius.md,
+    marginBottom: 20
   },
   actionItem: {
     flexDirection: 'row',
@@ -494,70 +598,58 @@ const styles = StyleSheet.create({
     gap: 12
   },
   actionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(232, 93, 117, 0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.colors.surfaceHighlight,
     alignItems: 'center',
     justifyContent: 'center'
   },
   actionLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: THEME.colors.burgundy
+    color: THEME.colors.textHeading
   },
   footer: {
     alignItems: 'center',
-    marginTop: 10
+    marginTop: 6
   },
   footerApp: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: THEME.colors.rose,
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.colors.primary,
     letterSpacing: 1
   },
   footerNote: {
     fontSize: 11,
-    color: THEME.colors.muted,
-    marginTop: 4,
+    color: THEME.colors.textMuted,
+    marginTop: 2,
     textAlign: 'center'
   },
   partnerCodeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(232, 93, 117, 0.08)',
+    backgroundColor: THEME.colors.surfaceHighlight,
     paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderRadius: THEME.radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(232, 93, 117, 0.2)',
+    borderColor: THEME.colors.border,
     width: '100%',
     marginBottom: 14
   },
   partnerCodeBannerLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    color: THEME.colors.rose,
+    fontWeight: '700',
+    color: THEME.colors.primary,
     letterSpacing: 0.8
   },
   partnerCodeBannerCode: {
     fontSize: 14,
-    fontWeight: '800',
-    color: THEME.colors.burgundy,
+    fontWeight: '700',
+    color: THEME.colors.textHeading,
     letterSpacing: 1
-  },
-  managePartnerBtn: {
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(232, 93, 117, 0.3)'
-  },
-  managePartnerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: THEME.colors.rose
   }
 });

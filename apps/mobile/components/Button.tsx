@@ -13,7 +13,7 @@ import { THEME } from '../constants/theme';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   disabled?: boolean;
@@ -47,6 +47,10 @@ export const Button: React.FC<ButtonProps> = ({
         return styles.secondaryBtn;
       case 'outline':
         return styles.outlineBtn;
+      case 'ghost':
+        return styles.ghostBtn;
+      case 'danger':
+        return styles.dangerBtn;
       default:
         return styles.primaryBtn;
     }
@@ -58,6 +62,10 @@ export const Button: React.FC<ButtonProps> = ({
         return styles.secondaryText;
       case 'outline':
         return styles.outlineText;
+      case 'ghost':
+        return styles.ghostText;
+      case 'danger':
+        return styles.dangerText;
       default:
         return styles.primaryText;
     }
@@ -123,8 +131,16 @@ const styles = StyleSheet.create({
   },
   outlineBtn: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: THEME.colors.border
+  },
+  ghostBtn: {
+    backgroundColor: 'transparent'
+  },
+  dangerBtn: {
+    backgroundColor: THEME.colors.errorBg,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.2)'
   },
   disabledBtn: {
     opacity: 0.5
@@ -141,5 +157,11 @@ const styles = StyleSheet.create({
   },
   outlineText: {
     color: THEME.colors.burgundy
+  },
+  ghostText: {
+    color: THEME.colors.rose
+  },
+  dangerText: {
+    color: THEME.colors.error
   }
 });

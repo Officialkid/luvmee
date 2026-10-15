@@ -1,38 +1,37 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Platform, View, StyleSheet } from 'react-native';
-import { Heart, Sparkles, FolderHeart, User, MessageCircleHeart } from 'lucide-react-native';
+import { Platform } from 'react-native';
+import { Heart, MessageCircleHeart, Users, CalendarDays, User, Sparkles, FolderHeart } from 'lucide-react-native';
 import { THEME } from '../../constants/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  // Ensure Android navigation bar does not cut off the tabs
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
-  const tabHeight = 60 + bottomPadding;
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 8);
+  const tabHeight = 58 + bottomPadding;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: THEME.colors.rose,
-        tabBarInactiveTintColor: '#542638',
+        tabBarActiveTintColor: THEME.colors.primary,
+        tabBarInactiveTintColor: THEME.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: 'rgba(232, 93, 117, 0.2)',
+          backgroundColor: THEME.colors.surface,
+          borderTopColor: THEME.colors.border,
           borderTopWidth: 1,
           height: tabHeight,
           paddingBottom: bottomPadding,
           paddingTop: 8,
-          elevation: 12,
-          shadowColor: '#542638',
+          elevation: 8,
+          shadowColor: THEME.colors.textHeading,
           shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 10
+          shadowOpacity: 0.05,
+          shadowRadius: 8
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
+          fontSize: 11,
+          fontWeight: '600',
           marginTop: 2
         },
         tabBarItemStyle: {
@@ -48,7 +47,7 @@ export default function TabLayout() {
             <Heart
               color={color}
               size={focused ? size + 2 : size}
-              fill={focused ? THEME.colors.rose : 'none'}
+              fill={focused ? THEME.colors.primary : 'none'}
             />
           )
         }}
@@ -56,38 +55,38 @@ export default function TabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Love Notes',
+          title: 'Messages',
           tabBarIcon: ({ color, size, focused }) => (
             <MessageCircleHeart
               color={color}
               size={focused ? size + 2 : size}
-              fill={focused ? 'rgba(232, 93, 117, 0.25)' : 'none'}
+              fill={focused ? 'rgba(232, 93, 117, 0.2)' : 'none'}
             />
           )
         }}
       />
       <Tabs.Screen
-        name="templates"
+        name="people"
         options={{
-          title: 'Templates',
+          title: 'People',
           tabBarIcon: ({ color, size, focused }) => (
-            <Sparkles
+            <Users
               color={color}
               size={focused ? size + 2 : size}
-              fill={focused ? THEME.colors.rose : 'none'}
+              fill={focused ? 'rgba(232, 93, 117, 0.2)' : 'none'}
             />
           )
         }}
       />
       <Tabs.Screen
-        name="my-experiences"
+        name="calendar"
         options={{
-          title: 'Surprises',
+          title: 'Calendar',
           tabBarIcon: ({ color, size, focused }) => (
-            <FolderHeart
+            <CalendarDays
               color={color}
               size={focused ? size + 2 : size}
-              fill={focused ? 'rgba(232, 93, 117, 0.25)' : 'none'}
+              fill={focused ? 'rgba(232, 93, 117, 0.2)' : 'none'}
             />
           )
         }}
@@ -102,6 +101,31 @@ export default function TabLayout() {
               size={focused ? size + 2 : size}
             />
           )
+        }}
+      />
+      {/* Secondary Screens kept registered for deep linking and programmatic navigation, but hidden from bottom tab bar */}
+      <Tabs.Screen
+        name="templates"
+        options={{
+          href: null,
+          title: 'Templates',
+          tabBarIcon: ({ color, size }) => <Sparkles color={color} size={size} />
+        }}
+      />
+      <Tabs.Screen
+        name="my-experiences"
+        options={{
+          href: null,
+          title: 'Surprises',
+          tabBarIcon: ({ color, size }) => <FolderHeart color={color} size={size} />
+        }}
+      />
+      <Tabs.Screen
+        name="plans"
+        options={{
+          href: null,
+          title: 'Plans',
+          tabBarIcon: ({ color, size }) => <Sparkles color={color} size={size} />
         }}
       />
     </Tabs>

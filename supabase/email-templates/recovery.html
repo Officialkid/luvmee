@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your LUVMEE Password</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #FCE7ED;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #25212A;
+      -webkit-font-smoothing: antialiased;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    .container {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      background-color: #FFFFFF;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(232, 93, 117, 0.2);
+      box-shadow: 0 10px 30px rgba(84, 40, 56, 0.08);
+    }
+    .header {
+      background: linear-gradient(135deg, #FCE7ED 0%, #FFF9F2 100%);
+      padding: 36px 30px 24px 30px;
+      text-align: center;
+      border-bottom: 1px solid rgba(232, 93, 117, 0.15);
+    }
+    .brand-pill {
+      display: inline-block;
+      background-color: #FFFFFF;
+      color: #E85D75;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(232, 93, 117, 0.25);
+      margin-bottom: 12px;
+    }
+    .brand-title {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: #542838;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.5px;
+    }
+    .brand-subtitle {
+      font-size: 14px;
+      color: #733E53;
+      margin: 0;
+    }
+    .content {
+      padding: 36px 32px;
+      text-align: center;
+    }
+    .heading {
+      font-size: 20px;
+      font-weight: 700;
+      color: #542838;
+      margin: 0 0 10px 0;
+    }
+    .body-text {
+      font-size: 15px;
+      line-height: 22px;
+      color: #4A3E44;
+      margin: 0 0 24px 0;
+    }
+    .otp-card {
+      background-color: #FFF9F2;
+      border: 2px dashed #E85D75;
+      border-radius: 16px;
+      padding: 24px 20px;
+      margin: 0 auto 28px auto;
+      max-width: 380px;
+    }
+    .otp-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #8E6072;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .otp-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 40px;
+      font-weight: 800;
+      color: #542838;
+      letter-spacing: 10px;
+      margin: 0;
+      padding-left: 10px;
+    }
+    .button-link {
+      display: inline-block;
+      background: linear-gradient(135deg, #E85D75 0%, #D6465F 100%);
+      color: #FFFFFF !important;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 30px;
+      box-shadow: 0 6px 18px rgba(232, 93, 117, 0.35);
+      margin-bottom: 24px;
+    }
+    .security-notice {
+      background-color: #FAF6F0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 13px;
+      line-height: 18px;
+      color: #733E53;
+      margin-top: 10px;
+      text-align: left;
+    }
+    .footer {
+      padding: 24px 30px;
+      text-align: center;
+      font-size: 12px;
+      color: #8E6072;
+      border-top: 1px solid rgba(232, 93, 117, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #FCE7ED; padding: 40px 15px;">
+    <tr>
+      <td align="center">
+        <div class="container">
+          <!-- Header -->
+          <div class="header">
+            <div class="brand-pill">🔒 Password Assistance</div>
+            <h1 class="brand-title">LUVMEE</h1>
+            <p class="brand-subtitle">Thoughtful Celebrations & Meaningful Connections</p>
+          </div>
+
+          <!-- Content Body -->
+          <div class="content">
+            <h2 class="heading">Reset Your Password</h2>
+            <p class="body-text">
+              We received a request to reset your password. Use the verification code below or tap the button to proceed:
+            </p>
+
+            <!-- 6-Digit OTP Box -->
+            <div class="otp-card">
+              <div class="otp-label">Reset Code</div>
+              <div class="otp-code">{{ .Token }}</div>
+            </div>
+
+            <!-- Alternative One-Click Link -->
+            <a href="{{ .ConfirmationURL }}" class="button-link" target="_blank">
+              Reset Password &rarr;
+            </a>
+
+            <!-- Security Notice -->
+            <div class="security-notice">
+              <strong>🔒 Security Note:</strong> This reset code expires in <strong>10 minutes</strong>. If you did not request a password reset, your account is safe and no action is required.
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <p style="margin: 0 0 6px 0; font-weight: 600; color: #542838;">LUVMEE V1</p>
+            <p style="margin: 0;">Remember who matters. Celebrate what counts. ❤️</p>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

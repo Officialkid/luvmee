@@ -403,6 +403,96 @@ export const STARTER_TEMPLATES: Template[] = [
         'Consider this your reminder that you are deeply appreciated.'
       ]
     }
+  },
+
+  // 7. Dedicated Birthday Celebration Card (Phase E)
+  {
+    id: 'birthday-celebration-card',
+    name: 'Birthday Celebration Card',
+    category: 'birthday_surprises',
+    description: 'A vibrant, celebratory greeting card wishing someone special a magnificent birthday.',
+    occasion: 'Birthdays',
+    previewColor: '#F59E0B',
+    previewEmoji: '🎂🎉',
+    isActive: true,
+    defaultConfig: {
+      creatorName: 'Someone Who Cares',
+      recipientName: 'Birthday Star',
+      title: 'Happy Birthday! 🎉',
+      theme: GOLDEN_SUNSET_THEME,
+      music: { enabled: true },
+      scenes: [
+        {
+          id: 's1',
+          type: 'greeting',
+          title: 'Happy Birthday, {recipientName}! 🎂',
+          bodyText: 'Today is all about celebrating you, your journey, and the happiness you bring to everyone around you.',
+          interaction: { type: 'next_button', primaryButtonText: 'Open Birthday Card 💌' },
+          order: 0
+        },
+        {
+          id: 's2',
+          type: 'letter',
+          title: 'A Special Birthday Wish',
+          bodyText: 'May this upcoming year be filled with exciting new adventures, sweet moments, good health, and immense joy. You deserve every good thing!',
+          interaction: { type: 'next_button', primaryButtonText: 'Make a Wish ✨' },
+          order: 1
+        },
+        {
+          id: 's3',
+          type: 'gift_box',
+          title: 'Cheers to Another Beautiful Year! 🥂',
+          bodyText: 'Have the most unforgettable birthday celebration today! With all my love and best wishes. ❤️',
+          interaction: { type: 'open_gift', primaryButtonText: 'Replay ↺' },
+          order: 2
+        }
+      ]
+    }
+  },
+
+  // 8. Friendship & Encouragement Card (Phase E)
+  {
+    id: 'friendship-encouragement-card',
+    name: 'Friendship & Encouragement Card',
+    category: 'appreciation',
+    description: 'Remind a cherished friend or mentor how much they mean to you.',
+    occasion: 'Friendship, Encouragement, Mentorship',
+    previewColor: '#10B981',
+    previewEmoji: '🌿☕',
+    isActive: true,
+    defaultConfig: {
+      creatorName: 'A True Friend',
+      recipientName: 'My Dear Friend',
+      title: 'Thinking of You Today',
+      theme: DEFAULT_ROMANTIC_THEME,
+      music: { enabled: true },
+      scenes: [
+        {
+          id: 's1',
+          type: 'greeting',
+          title: 'Just Checking In, {recipientName} 🌿',
+          bodyText: 'Life moves fast, but having friends like you makes every step of the journey better.',
+          interaction: { type: 'next_button', primaryButtonText: 'A Little Note 💌' },
+          order: 0
+        },
+        {
+          id: 's2',
+          type: 'letter',
+          title: 'Grateful for Our Friendship',
+          bodyText: 'Thank you for the laughter, the honest talks, and for always being someone I can count on. Proud of everything you are achieving.',
+          interaction: { type: 'next_button', primaryButtonText: 'A Warm Hug ☕' },
+          order: 1
+        },
+        {
+          id: 's3',
+          type: 'gift_box',
+          title: 'Always In Your Corner',
+          bodyText: 'Never hesitate to reach out whenever you want to grab coffee, vent, or celebrate a win! ✨',
+          interaction: { type: 'open_gift', primaryButtonText: 'Read Again ↺' },
+          order: 2
+        }
+      ]
+    }
   }
 ];
 

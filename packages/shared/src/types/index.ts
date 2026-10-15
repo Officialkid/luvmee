@@ -88,6 +88,8 @@ export interface Template {
   isActive: boolean;
 }
 
+export type SharingMode = 'public_link' | 'partner_exclusive';
+
 export interface Experience {
   id: string;
   userId: string;
@@ -98,6 +100,8 @@ export interface Experience {
   slug: string;
   config: ExperienceConfig;
   status: ExperienceStatus;
+  sharingMode: SharingMode;
+  recipientId?: string | null;
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -113,9 +117,11 @@ export interface RecipientResponse {
 
 export interface UserProfile {
   id: string;
+  username?: string | null;
   displayName: string;
-  avatarUrl?: string;
-  partnerCode?: string;
+  avatarUrl?: string | null;
+  partnerCode?: string | null;
+  lastActiveAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -154,4 +160,211 @@ export interface PartnerInvitation {
   status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   createdAt: string;
   updatedAt: string;
+}
+
+// ==============================================================================
+// PHASE 4B: PRIVATE LOVE NOTES & MESSAGING TYPES
+// ==============================================================================
+
+export type LoveNoteTag =
+  | 'Welcome ✨'
+  | 'Sweet Kiss 💋'
+  | 'Thinking of You 🌹'
+  | 'Date Night ☕'
+  | 'Surprise Reveal 🎁'
+  | 'Deep Love 💌'
+  | string;
+
+export interface LoveNote {
+  id: string;
+  partnershipId: string;
+  senderId: string;
+  recipientId: string;
+  content: string;
+  tag?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+export interface SendLoveNotePayload {
+  content: string;
+  tag?: string;
+}
+
+// ==============================================================================
+// PHASE 4C: PUSH NOTIFICATION TYPES
+// ==============================================================================
+
+export type NotificationCategory =
+  | 'partner_invitation'
+  | 'invitation_accepted'
+  | 'love_note'
+  | 'partner_surprise';
+
+export interface NotificationEvent {
+  id: string;
+  userId: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  data: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  userId: string;
+  partnerInvitations: boolean;
+  loveNotes: boolean;
+  surprises: boolean;
+  updatedAt: string;
+}
+
+export interface RegisterPushTokenPayload {
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+}
+
+// ==============================================================================
+// PHASE B: PEOPLE DIRECTORY & IMPORTANT DATES TYPES
+// ==============================================================================
+
+export type RelationshipLabel =
+  | 'partner'
+  | 'friend'
+  | 'parent'
+  | 'sibling'
+  | 'child'
+  | 'mentor'
+  | 'colleague'
+  | 'family'
+  | 'other';
+
+export interface Person {
+  id: string;
+  userId: string;
+  displayName: string;
+  relationshipLabel?: RelationshipLabel | string;
+  notes?: string | null;
+  avatarEmoji?: string | null;
+  linkedAccountId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OccasionCategory =
+  | 'birthday'
+  | 'anniversary'
+  | 'milestone'
+  | 'celebration'
+  | 'custom';
+
+export type OccasionRecurrence = 'annual' | 'none';
+
+export interface ImportantDate {
+  id: string;
+  userId: string;
+  personId?: string | null;
+  category: OccasionCategory;
+  title: string;
+  month: number; // 1 - 12
+  day: number;   // 1 - 31
+  year?: number | null; // Nullable for unknown birth/start year
+  recurrence: OccasionRecurrence;
+  reminderEnabled: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePersonPayload {
+  displayName: string;
+  relationshipLabel?: string;
+  notes?: string;
+  avatarEmoji?: string;
+  linkedAccountId?: string;
+}
+
+export interface CreateImportantDatePayload {
+  personId?: string | null;
+  category: OccasionCategory;
+  title: string;
+  month: number;
+  day: number;
+  year?: number | null;
+  recurrence?: OccasionRecurrence;
+  reminderEnabled?: boolean;
+  notes?: string;
+}
+
+// ==============================================================================
+// PHASE F: LIGHTWEIGHT PERSONAL PLANS TYPES
+// ==============================================================================
+
+export type PlanStatus = 'planned' | 'completed';
+
+export interface PersonalPlan {
+  id: string;
+  userId: string;
+  personId?: string | null;
+  occasionId?: string | null;
+  title: string;
+  plannedDate?: string | null; // ISO YYYY-MM-DD or full ISO
+  placeName?: string | null;
+  activity?: string | null;
+  giftIdea?: string | null;
+  notes?: string | null;
+  status: PlanStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePersonalPlanPayload {
+  personId?: string | null;
+  occasionId?: string | null;
+  title: string;
+  plannedDate?: string | null;
+  placeName?: string | null;
+  activity?: string | null;
+  giftIdea?: string | null;
+  notes?: string | null;
+  status?: PlanStatus;
+}
+
+// ==============================================================================
+// AUTH, IDENTITY & ACCOUNT TYPES
+// ==============================================================================
+
+export interface EmailOtpRequestPayload {
+  email: string;
+}
+
+export interface EmailOtpVerifyPayload {
+  email: string;
+  token: string;
+}
+
+export interface EmailPasswordSignUpPayload {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  username: string;
+}
+
+export interface EmailPasswordLoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface PasswordResetRequestPayload {
+  email: string;
+}
+
+export interface UpdatePasswordPayload {
+  password: string;
+  confirmPassword: string;
+}
+
+export interface UpdateUsernamePayload {
+  username: string;
 }

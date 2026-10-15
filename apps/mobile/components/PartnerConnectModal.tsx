@@ -30,6 +30,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { PartnerState } from '@luvmee/shared';
 import { partnerService } from '../services/partnerService';
+import { authService } from '../services/authService';
 import { supabase } from '../services/supabase';
 
 interface PartnerConnectModalProps {
@@ -52,9 +53,10 @@ export function PartnerConnectModal({
 
   const handleShareCode = async () => {
     if (!partnerState.myPartnerCode) return;
+    const webBaseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
     try {
       await Share.share({
-        message: `Connect with me on LUVMEE! 💕 My Partner Code is: ${partnerState.myPartnerCode}`
+        message: `Connect with me on LUVMEE! 💕\n\nMy Partner Code is: ${partnerState.myPartnerCode}\n\nDon't have the LUVMEE app yet? Get it here: ${webBaseUrl}`
       });
       setCopiedNotice(true);
       setTimeout(() => setCopiedNotice(false), 3000);
@@ -78,7 +80,8 @@ export function PartnerConnectModal({
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Sign In',
-            onPress: () => {
+            onPress: async () => {
+              await authService.setAuthRedirect('/(tabs)');
               onClose();
               router.push('/(auth)/sign-in');
             }
