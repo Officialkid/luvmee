@@ -22,8 +22,12 @@ import {
   ChevronRight,
   PenSquare,
   Trash2,
-  Bookmark
+  Bookmark,
+  FileText,
+  HelpCircle
 } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { THEME } from '../../constants/theme';
 import { Card } from '../../components/Card';
@@ -155,6 +159,32 @@ export default function ProfileScreen() {
         }
       ]
     );
+  };
+
+  const webBaseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.eventsslot.com';
+
+  const handleOpenPrivacy = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(`${webBaseUrl}/privacy`);
+    } catch {
+      Linking.openURL(`${webBaseUrl}/privacy`);
+    }
+  };
+
+  const handleOpenTerms = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(`${webBaseUrl}/terms`);
+    } catch {
+      Linking.openURL(`${webBaseUrl}/terms`);
+    }
+  };
+
+  const handleOpenSupport = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(`${webBaseUrl}/support`);
+    } catch {
+      Linking.openURL(`${webBaseUrl}/support`);
+    }
   };
 
   return (
@@ -366,6 +396,30 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.actionLabel}>Reset Local Cache</Text>
             <ChevronRight size={16} color={THEME.colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionItem} onPress={handleOpenPrivacy} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: THEME.colors.surfaceHighlight }]}>
+              <ShieldCheck size={16} color={THEME.colors.primary} />
+            </View>
+            <Text style={styles.actionLabel}>Privacy Policy</Text>
+            <ExternalLink size={14} color={THEME.colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionItem} onPress={handleOpenTerms} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: THEME.colors.surfaceHighlight }]}>
+              <FileText size={16} color={THEME.colors.primary} />
+            </View>
+            <Text style={styles.actionLabel}>Terms of Service</Text>
+            <ExternalLink size={14} color={THEME.colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionItem} onPress={handleOpenSupport} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: THEME.colors.surfaceHighlight }]}>
+              <HelpCircle size={16} color={THEME.colors.primary} />
+            </View>
+            <Text style={styles.actionLabel}>Help & Support</Text>
+            <ExternalLink size={14} color={THEME.colors.textMuted} />
           </TouchableOpacity>
 
           {userEmail && (

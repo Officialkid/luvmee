@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build:shared && npm run build:web",
+    "postinstall": "npm run build:shared",
     "test": "npm run test:shared",
     "build:shared": "npm --workspace=@luvmee/shared run build",
     "test:shared": "npm --workspace=@luvmee/shared test",

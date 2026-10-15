@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 10.0.0"
+    "version": ">= 10.0.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -12,6 +13,12 @@
       "android": {
         "buildType": "apk"
       },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zfcqbydqdmoyjgiebplo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_1wCwYjzvauvhn0d74sVD-g_XuvraA8D",
+        "EXPO_PUBLIC_RECIPIENT_BASE_URL": "https://luvmee.eventsslot.com",
+        "EXPO_PUBLIC_AUTH_REDIRECT_URL": "luvmee://auth/callback"
+      },
       "ios": {
         "simulator": true
       }
@@ -19,6 +26,12 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zfcqbydqdmoyjgiebplo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_1wCwYjzvauvhn0d74sVD-g_XuvraA8D",
+        "EXPO_PUBLIC_RECIPIENT_BASE_URL": "https://luvmee.eventsslot.com",
+        "EXPO_PUBLIC_AUTH_REDIRECT_URL": "luvmee://auth/callback"
       }
     }
   },

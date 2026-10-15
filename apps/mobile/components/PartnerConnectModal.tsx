@@ -56,7 +56,7 @@ export function PartnerConnectModal({
     const webBaseUrl = process.env.EXPO_PUBLIC_RECIPIENT_BASE_URL || 'https://luvmee.vercel.app';
     try {
       await Share.share({
-        message: `Connect with me on LUVMEE! 💕\n\nMy Partner Code is: ${partnerState.myPartnerCode}\n\nDon't have the LUVMEE app yet? Get it here: ${webBaseUrl}`
+        message: `Connect with me on LUVMEE! 💕\n\nMy Partner Code is: ${partnerState.myPartnerCode}\n\nDownload the app and connect with me here:\n${webBaseUrl}?code=${partnerState.myPartnerCode}`
       });
       setCopiedNotice(true);
       setTimeout(() => setCopiedNotice(false), 3000);

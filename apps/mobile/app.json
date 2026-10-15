@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FCE7ED"
       },
-      "package": "com.officialkid.luvmee"
+      "package": "com.officialkid.luvmee",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -32,6 +33,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "52a47cbe-9b37-4109-a9ea-28236e6d40f8"
+      }
+    },
+    "owner": "dan.mwaili"
   }
 }

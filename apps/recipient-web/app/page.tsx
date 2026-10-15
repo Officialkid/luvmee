@@ -1,5 +1,10 @@
+import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { Heart, Sparkles, Send, Gift } from 'lucide-react';
+import { Heart, Sparkles, Gift, Download } from 'lucide-react';
+import { PartnerInviteBanner } from '../components/PartnerInviteBanner';
+
+const apkDownloadUrl =
+  'https://expo.dev/accounts/dan.mwaili/projects/luvmee/builds/8a24c374-7809-4544-9153-3164deaf71a0';
 
 export default function HomePage() {
   return (
@@ -10,13 +15,24 @@ export default function HomePage() {
           <span className="text-2xl anim-pulse">💖</span>
           <span className="font-serif font-bold text-xl text-luvmee-burgundy tracking-tight">LUVMEE</span>
         </div>
-        <span className="text-xs font-semibold px-3 py-1 bg-white/80 rounded-full border border-luvmee-rose/20 text-luvmee-rose">
-          V1 Release
-        </span>
+        <a
+          href={apkDownloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-semibold px-3 py-1 bg-white/80 rounded-full border border-luvmee-rose/30 text-luvmee-rose hover:bg-rose-50 transition-colors inline-flex items-center gap-1.5 shadow-sm"
+        >
+          <Download className="w-3 h-3" />
+          <span>Get App</span>
+        </a>
       </header>
 
-      {/* Hero Section */}
-      <section className="my-auto py-12 text-center">
+      {/* Hero & Content */}
+      <section className="my-auto py-6 text-center">
+        {/* Dynamic Partner Invitation Banner (reads ?code=... from URL) */}
+        <Suspense fallback={null}>
+          <PartnerInviteBanner />
+        </Suspense>
+
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 border border-luvmee-rose/25 text-luvmee-rose text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Romantic Digital Experiences</span>
@@ -39,12 +55,38 @@ export default function HomePage() {
             <span>Preview A Surprise</span>
             <Gift className="w-4 h-4" />
           </Link>
+          <a
+            href={apkDownloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-white border border-luvmee-rose/30 text-luvmee-burgundy font-bold text-base shadow hover:bg-rose-50 transition-colors"
+          >
+            <Download className="w-4 h-4 text-luvmee-rose" />
+            <span>Download APK</span>
+          </a>
         </div>
       </section>
 
       {/* Footer Info */}
-      <footer className="py-6 text-center text-xs text-luvmee-muted border-t border-luvmee-rose/10">
-        <p>Built with love. Mobile app created with React Native & Expo.</p>
+      <footer className="py-8 text-center text-xs text-luvmee-muted border-t border-luvmee-rose/15 mt-8">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-3 font-medium text-luvmee-burgundy-soft text-xs">
+          <Link href="/privacy" className="hover:text-luvmee-rose transition-colors">
+            Privacy Policy
+          </Link>
+          <span className="text-luvmee-rose/30">•</span>
+          <Link href="/terms" className="hover:text-luvmee-rose transition-colors">
+            Terms of Service
+          </Link>
+          <span className="text-luvmee-rose/30">•</span>
+          <Link href="/support" className="hover:text-luvmee-rose transition-colors">
+            Help & Support
+          </Link>
+          <span className="text-luvmee-rose/30">•</span>
+          <Link href="/delete-account" className="hover:text-luvmee-rose transition-colors">
+            Delete Account
+          </Link>
+        </div>
+        <p className="text-[11px] text-luvmee-muted">Built with love. Mobile app created with React Native & Expo.</p>
       </footer>
     </main>
   );

@@ -337,6 +337,14 @@ export const authService = {
         return await this.handleAuthUrl(authResult.url);
       }
 
+      // Check if session was already established (e.g. via deep link or concurrent callback)
+      const currentSession = await this.getSession();
+      if (currentSession) {
+        await this.recordActivity();
+        notificationService.registerDeviceForPush().catch(() => {});
+        return { success: true, session: currentSession, user: currentSession.user };
+      }
+
       if (authResult.type === 'cancel' || authResult.type === 'dismiss') {
         return { success: false, error: 'Google sign in was cancelled.' };
       }
@@ -606,6 +614,57 @@ export const authService = {
       return {
         success: false,
         error: err?.message || 'Failed to complete authentication from link.'
+      };
+    }
+  },
+
+  /**
+   * Handles authentication directly from parsed route parameters (Expo Router deep linking)
+   */
+  async handleAuthParams(params: Record<string, any>): Promise<AuthActionResult> {
+    try {
+      if (params.error || params.error_description) {
+        return {
+          success: false,
+          error: (params.error_description as string) || (params.error as string) || 'Authentication was cancelled or denied.'
+        };
+      }
+
+      const code = (params.code as string) || (params.token as string);
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error && data?.session) {
+          await this.recordActivity();
+          notificationService.registerDeviceForPush().catch(() => {});
+          return { success: true, session: data.session, user: data.user };
+        }
+      }
+
+      const accessToken = (params.access_token as string) || (params.accessToken as string);
+      const refreshToken = (params.refresh_token as string) || (params.refreshToken as string);
+      if (accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        if (!error && data?.session) {
+          await this.recordActivity();
+          notificationService.registerDeviceForPush().catch(() => {});
+          return { success: true, session: data.session, user: data.user };
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await this.recordActivity();
+        return { success: true, session, user: session.user };
+      }
+
+      return { success: false, error: 'No active session or valid credentials found.' };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err?.message || 'Failed to authenticate from credentials.'
       };
     }
   },

@@ -1,70 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams, useGlobalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { authService } from '../../services/authService';
+import { supabase } from '../../services/supabase';
 import { Button } from '../../components/Button';
 import { THEME } from '../../constants/theme';
 
+// Ensure any in-app browser sessions complete cleanly
+WebBrowser.maybeCompleteAuthSession();
+
 export default function AuthCallbackScreen() {
   const router = useRouter();
+  const localParams = useLocalSearchParams();
+  const globalParams = useGlobalSearchParams();
+
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function processInitialUrl() {
-      try {
-        const initialUrl = await Linking.getInitialURL();
-        if (initialUrl && isMounted) {
-          await completeAuth(initialUrl);
-        } else {
-          // Check if session already exists
-          const session = await authService.getSession();
-          if (session && isMounted) {
-            await handleRedirectSuccess();
-          } else if (isMounted) {
-            setProcessing(false);
-            setError('No authentication link detected. Please try signing in again.');
-          }
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setProcessing(false);
-          setError(err?.message || 'Failed to process authentication link.');
-        }
-      }
-    }
-
-    // Also listen to incoming linking events while open
-    const subscription = Linking.addEventListener('url', async (event) => {
-      if (event.url && isMounted) {
-        await completeAuth(event.url);
-      }
-    });
-
-    processInitialUrl();
-
-    return () => {
-      isMounted = false;
-      subscription.remove();
-    };
-  }, []);
-
-  const completeAuth = async (url: string) => {
-    setProcessing(true);
-    setError(null);
-    const result = await authService.handleAuthUrl(url);
-    if (result.success) {
-      await handleRedirectSuccess();
-    } else {
-      setProcessing(false);
-      setError(result.error || 'Authentication link was invalid or expired.');
-    }
-  };
+  const hasResolvedRef = useRef(false);
 
   const handleRedirectSuccess = async () => {
+    if (hasResolvedRef.current) return;
+    hasResolvedRef.current = true;
     const targetRoute = await authService.popAuthRedirect();
     if (targetRoute) {
       router.replace(targetRoute as any);
@@ -72,6 +30,122 @@ export default function AuthCallbackScreen() {
       router.replace('/(tabs)');
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    let pollTimer: any = null;
+
+    // 1. Actively listen for Supabase auth state change (catches background OAuth token exchange)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (currentSession && isMounted && !hasResolvedRef.current) {
+        await handleRedirectSuccess();
+      }
+    });
+
+    // 2. Listen to incoming deep linking events while the screen is open
+    const linkSubscription = Linking.addEventListener('url', async (event) => {
+      if (event.url && isMounted && !hasResolvedRef.current) {
+        await processAuthUrl(event.url);
+      }
+    });
+
+    async function processAuthUrl(url: string) {
+      try {
+        setProcessing(true);
+        setError(null);
+        const res = await authService.handleAuthUrl(url);
+        if (res.success && isMounted) {
+          await handleRedirectSuccess();
+        } else if (isMounted && !hasResolvedRef.current) {
+          // Do not fail immediately, allow session poll to double-check
+        }
+      } catch (err: any) {
+        // Fallback
+      }
+    }
+
+    async function initializeAuth() {
+      // Step A: Check if session is already established
+      const activeSession = await authService.getSession();
+      if (activeSession && isMounted) {
+        await handleRedirectSuccess();
+        return;
+      }
+
+      // Step B: Inspect route parameters passed by Expo Router deep linking
+      const combinedParams = { ...globalParams, ...localParams };
+
+      if (combinedParams.error || combinedParams.error_description) {
+        if (isMounted) {
+          setProcessing(false);
+          setError(
+            (combinedParams.error_description as string) ||
+            (combinedParams.error as string) ||
+            'Authentication was cancelled or denied.'
+          );
+        }
+        return;
+      }
+
+      if (combinedParams.code || combinedParams.token || combinedParams.access_token) {
+        const paramResult = await authService.handleAuthParams(combinedParams);
+        if (paramResult.success && isMounted) {
+          await handleRedirectSuccess();
+          return;
+        }
+      }
+
+      // Step C: Check initial deep link URL from cold start
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          const urlResult = await authService.handleAuthUrl(initialUrl);
+          if (urlResult.success && isMounted) {
+            await handleRedirectSuccess();
+            return;
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+
+      // Step D: Graceful polling (wait up to 3 seconds for background OAuth / deep-link resolution)
+      let attempts = 0;
+      const maxAttempts = 8;
+      const pollInterval = 400; // 400ms * 8 = 3.2 seconds max
+
+      const checkSessionLoop = async () => {
+        if (!isMounted || hasResolvedRef.current) return;
+        const s = await authService.getSession();
+        if (s && isMounted) {
+          await handleRedirectSuccess();
+          return;
+        }
+
+        attempts += 1;
+        if (attempts < maxAttempts) {
+          pollTimer = setTimeout(checkSessionLoop, pollInterval);
+        } else {
+          // Timeout reached with no session or credentials detected
+          if (isMounted && !hasResolvedRef.current) {
+            setProcessing(false);
+            setError('No authentication link detected. Please try signing in again.');
+          }
+        }
+      };
+
+      pollTimer = setTimeout(checkSessionLoop, pollInterval);
+    }
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      if (pollTimer) clearTimeout(pollTimer);
+      authListener?.subscription.unsubscribe();
+      linkSubscription.remove();
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
